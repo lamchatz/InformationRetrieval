@@ -1,0 +1,9 @@
+
+„
+java:S1488""gImmediately return this expression instead of assigning it to the temporary variable "processedString".(í¡í—8øÿ­•‹2
+J
+java:S1172!"-Remove this unused method parameter "speech".(¿¡ñ¾8´ð“•‹2
+B
+java:S1068"%Remove this unused "R" private field.(®â…•8µð“•‹2
+O
+java:S1144!"2Remove this unused private "processString" method.(¿¡ñ¾8¶ð“•‹2
