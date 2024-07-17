@@ -1,2 +1,12 @@
 
-L	java:S106"+Replace this use of System.out by a logger.(¨¶ÑÍþÿÿÿÿ8é¦–“‹2
+]	java:S125"<This block of commented-out lines of code should be removed.(¸¶§“þÿÿÿÿ8Ò¤‡Ã‹2
+\
+java:S6213":Rename this variable to not match a restricted identifier.(”Ð¯Íûÿÿÿÿ8Ø¤‡Ã‹2
+X	java:S125"<This block of commented-out lines of code should be removed.(Ï¡ñÍ8Ù¤‡Ã‹2
+L	java:S106#"+Replace this use of System.out by a logger.(´‹¹öþÿÿÿÿ8Ú¤‡Ã‹2
+X	java:S125'"<This block of commented-out lines of code should be removed.(¨™¢²8Ú¤‡Ã‹2
+L	java:S106*"+Replace this use of System.out by a logger.(¨¶ÑÍþÿÿÿÿ8Û¤‡Ã‹2
+L
+java:S1068"*Remove this unused "NORMAL" private field.(Ä´æÎûÿÿÿÿ8Æ×•Ã‹2
+J
+java:S1068"(Remove this unused "TEST" private field.(îþüÊúÿÿÿÿ8á¬ˆÃ‹2

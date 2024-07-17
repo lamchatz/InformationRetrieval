@@ -1,9 +1,17 @@
 
-„
-java:S1488""gImmediately return this expression instead of assigning it to the temporary variable "processedString".(í¡í—8øÿ­•‹2
-J
-java:S1172!"-Remove this unused method parameter "speech".(¿¡ñ¾8´ğ“•‹2
-B
-java:S1068"%Remove this unused "R" private field.(®â…•8µğ“•‹2
-O
-java:S1144!"2Remove this unused private "processString" method.(¿¡ñ¾8¶ğ“•‹2
+;
+java:S3010"Remove this assignment of "c".(ò‹÷Ó8–üÂÃ‹2
+;
+java:S3010"Remove this assignment of "i".(Ş¼Ş¢8˜üÂÃ‹2
+L	java:S106+"+Replace this use of System.out by a logger.(¨¶ÑÍşÿÿÿÿ8¡üÂÃ‹2
+F	java:S1060"+Replace this use of System.out by a logger.(ªøÏW8£üÂÃ‹2
+G	java:S1063"+Replace this use of System.out by a logger.(×îëó8¥üÂÃ‹2
+G	java:S1068"+Replace this use of System.out by a logger.(Ò§³¬8¨üÂÃ‹2
+]	java:S1259"<This block of commented-out lines of code should be removed.(ë¬üîùÿÿÿÿ8¨üÂÃ‹2
+S
+java:S2696I"6Make the enclosing method "static" or remove this set.(Ì‚ˆÌ8¯üÂÃ‹2
+X
+java:S2696K"6Make the enclosing method "static" or remove this set.(ŸÅ¿Ãşÿÿÿÿ8¯üÂÃ‹2
+]	java:S125M"<This block of commented-out lines of code should be removed.(¯í•âùÿÿÿÿ8ÍéÇÃ‹2
+X
+java:S1144"6Remove this unused private "saveAndFreeMemory" method.(úõÊàùÿÿÿÿ8±üÂÃ‹2

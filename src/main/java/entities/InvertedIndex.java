@@ -1,37 +1,56 @@
 package entities;
 
+import java.io.*;
 import java.util.*;
 
 public class InvertedIndex {
 
-    private static final Set<String> R = Set.of("κι", "και", "Ο", "ο", "Η", "η", "Το", "το", "Οι", "οι",
-            "Τα", "τα", "Τους", "τους", "αλλά", "Αλλά", "Άλλα", "άλλα", "ή", "Ή", "ενώ", "Ενώ", "άρα", "Άρα",
-            "Μόλις", "μόλις", "Επειδή", "επειδή", "Αφού", "αφού", "Καθώς", "καθώς", "Λοιπόν", "λοιπόν", "Έτσι",
-            "έτσι", "Δηλαδή", "δηλαδή", "Βασικά", "βασικά", "Μάλλον", "μάλλον", "Στο", "στο", "Στα", "στα",
-            "Στη", "στη", "Στην", "στην", "Στον", "στον", "Στους", "στους", "Του", "του", "Των", "των", "Τις",
-            "τις", "Τες", "τες", "Της", "της", "Την", "την", "Ένας", "ένας", "Μία", "μία", "Ένα", "ένα", "Ενός",
-            "ενός", "Έναν", "έναν", "Μίας", "μίας", "Ότι", "ότι", "Διότι", "διότι", "Παρά", "παρά", "Ούτε", "ούτε",
-            "Είτε", "είτε", "Ακομή", "ακόμη", "που", "Που", "Γιατί", "γιατί", ",", ".", "!", "'", ";", "\"", "-");
 
-    private Map<String, Set<String>> index;
+    private static final String INVERTED_INDEX = "src/main/resources/inverted_index.txt";
+    private Map<String, Map<String, Long>> index;
+
+    private static long i;
+    private static long c;
 
     public InvertedIndex () {
         index = new HashMap<>();
+        c = 0;
+        i = 0;
     }
 
-    public void indexSpeech(String speechId, String content) {
-        String[] words = content.split(" ");
+    private void saveAndFreeMemory() {
+        File file = new File(INVERTED_INDEX);
+        try (BufferedWriter bf = new BufferedWriter(new FileWriter(file, true))) {
+            for (Map.Entry<String, Map<String, Long>> entry : index.entrySet()) {
+                bf.write(entry.getKey() + ":" + entry.getValue());
+                bf.newLine();
+            }
 
-        for (String word: words) {
-            word = word.toLowerCase();
+            bf.flush();
+            index.clear();
 
-            index.computeIfAbsent(word, w -> new HashSet<>());
-            index.get(word).add(speechId);
+        } catch (IOException e) {
+            System.out.println(e);
         }
     }
 
-    private String processString(String speech) {
-        String processedString = "";
-        return processedString;
+    public void printI() {
+        System.out.println(i + " of " + c);
     }
+    public void print() {
+        index.entrySet().forEach(System.out::println);
+    }
+
+    public void indexSpeech(String memberName, List<String> content, long rows) {
+//        if (rows % 5000 == 0) {
+//            System.out.println("Clearing memory");
+//            //saveAndFreeMemory();
+//        }
+
+        for (String word:  content) {
+            index.computeIfAbsent(word, w -> new HashMap<>()).merge(memberName, 1L, Long::sum);
+        }
+    }
+
+
 }

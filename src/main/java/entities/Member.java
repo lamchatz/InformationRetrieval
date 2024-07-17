@@ -1,6 +1,8 @@
 package entities;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Objects;
 
 public class Member {
 
@@ -15,7 +17,7 @@ public class Member {
     private String role;
     private boolean gender;
 
-    private Collection<String> speeches;
+    private Collection<Speech> speeches;
 
     public Member() {
         super();
@@ -27,6 +29,7 @@ public class Member {
         this.region = region;
         this.role = role;
         this.gender = gender;
+        this.speeches = new ArrayList<>();
     }
 
     public static Builder with() {
@@ -53,11 +56,11 @@ public class Member {
         return gender;
     }
 
-    public Collection<String> getSpeeches() {
+    public Collection<Speech> getSpeeches() {
         return speeches;
     }
 
-    public void addSpeech(String speech) {
+    public void addSpeech(Speech speech) {
         speeches.add(speech);
     }
 
@@ -75,6 +78,19 @@ public class Member {
         sb.append(", gender=").append(gender);
         sb.append('}');
         return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Member member = (Member) o;
+        return name.equals(member.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
     }
 
     public static class Builder {

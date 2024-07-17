@@ -11,3 +11,5 @@ Q
 !src/main/java/entities/Entry.java,d\9\d9cbebe525b264a4b40f4f30b413f5c26de8cd95
 Y
 )src/main/java/entities/InvertedIndex.java,3\b\3b6f8039e06fed1db4c069958d3c7b7d11f8b6a0
+7
+pom.xml,4\4\442292b8a7efeabbe4cc176709b833b1792140ec
