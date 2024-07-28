@@ -1,27 +1,34 @@
 package entities;
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class InvertedIndex {
-
-
     private static final String INVERTED_INDEX = "src/main/resources/inverted_index.txt";
-    private Map<String, Map<String, Long>> index;
+    private Map<String, Map<Long, Long>> index;
 
     private static long i;
-    private static long c;
+    private long counter;
+    private final boolean saveIndexToFile;
+    private final int saveAfter;
 
-    public InvertedIndex () {
-        index = new HashMap<>();
-        c = 0;
+    public InvertedIndex (boolean saveIndexToFile, int saveAfter) {
+        this.index = new HashMap<>();
+        this.saveIndexToFile = saveIndexToFile;
+        this.saveAfter = saveAfter;
+        this.counter = 0;
         i = 0;
     }
 
     private void saveAndFreeMemory() {
+        System.out.println("saving");
         File file = new File(INVERTED_INDEX);
         try (BufferedWriter bf = new BufferedWriter(new FileWriter(file, true))) {
-            for (Map.Entry<String, Map<String, Long>> entry : index.entrySet()) {
+            for (Map.Entry<String, Map<Long, Long>> entry : index.entrySet()) {
                 bf.write(entry.getKey() + ":" + entry.getValue());
                 bf.newLine();
             }
@@ -35,21 +42,27 @@ public class InvertedIndex {
     }
 
     public void printI() {
-        System.out.println(i + " of " + c);
+        System.out.println(i + " of " + counter);
     }
     public void print() {
         index.entrySet().forEach(System.out::println);
     }
 
-    public void indexSpeech(String memberName, List<String> content, long rows) {
-//        if (rows % 5000 == 0) {
-//            System.out.println("Clearing memory");
-//            //saveAndFreeMemory();
-//        }
-
-        for (String word:  content) {
-            index.computeIfAbsent(word, w -> new HashMap<>()).merge(memberName, 1L, Long::sum);
+    public void indexSpeech(Speech speech) {
+        if (saveIndexToFile && counter == saveAfter) {
+            counter = 0;
+            saveAndFreeMemory();
         }
+
+        for (String word: speech.getWords()) {
+            index.computeIfAbsent(word, w -> new HashMap<>()).merge(speech.getId(), 1L, Long::sum);
+        }
+
+        counter++;
+    }
+
+    public Map<Long, Long> search(String word) {
+        return index.get(word);
     }
 
 
