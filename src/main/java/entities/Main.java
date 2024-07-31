@@ -10,17 +10,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class Main {
-    private static final String BIG = "src/main/resources/Greek_Parliament_Proceedings_1989_2020.csv";
-    private static final String NORMAL = "src/main/resources/Greek_Parliament_Proceedings.csv";
-    private static final String TEST = "src/main/resources/test.csv";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormat.forPattern("dd/MM/yyyy");
 
+    private static final boolean SAVE_INDEX_TO_DB = Config.SAVE_INDEX_TO_DATABASE;
+    private static final int EXECUTE_BATCH_AFTER = Config.EXECUTE_BATCH_AFTER;
     public static final String MEMBER_NAME = "member_name";
     public static final String SITTING_DATE = "sitting_date";
     public static final String PARLIAMENTARY_PERIOD = "parliamentary_period";
@@ -37,46 +32,60 @@ public class Main {
 
     public static void main(String[] args) {
         reader2();
+//        InvertedIndex invertedIndex = new InvertedIndex();
+//
+//        invertedIndex.readMap();
     }
 
     private static void reader2() {
-        Map<Member, List<Long>> members = new HashMap<>(); //ΒΑΣΗ
-        Map<Long, Speech> speeches = new HashMap<>(); //ΒΑΣΗ
+        //Map<Member, List<Long>> members = new HashMap<>(); //ΒΑΣΗ
+        //Map<Long, Speech> speeches = new HashMap<>(); //ΒΑΣΗ
+        DatabaseManager databaseManager = new DatabaseManager();
 
-        Config config = new Config();
-        InvertedIndex invertedIndex = new InvertedIndex(config.shouldSaveIndexToFile(), config.getSaveAfter());
+        InvertedIndex invertedIndex = new InvertedIndex();
 
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.BIG))) {
+            CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader(HEADER).withFirstRecordAsHeader());
 
-
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(TEST))) {
-            CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader(HEADER2).withFirstRecordAsHeader());
-
+            long counter = 0;
             for (CSVRecord csvRecord : csvParser) {
                 long id = csvRecord.getRecordNumber();
 
                 String name = csvRecord.get(MEMBER_NAME);
                 if (name != null && !name.isBlank()) {
-                    Member member = Member.with().name(name).create();
+                    //Member member = Member.with().name(name).create();
+                    counter++;
 
                     Speech speech = new Speech(id);
-                    speech.setContent(csvRecord.get(SPEECH));
+                    speech.setText(csvRecord.get(SPEECH));
                     speech.setTimePeriod(TimePeriod.with()
 //                            .sittingDate(LocalDate.parse(csvRecord.get(SITTING_DATE), DATE_TIME_FORMATTER))
 //                            .parliamentaryPeriod(csvRecord.get(PARLIAMENTARY_PERIOD))
 //                            .parliamentarySession(csvRecord.get(PARLIAMENTARY_SESSION))
 //                            .parliamentarySitting(csvRecord.get(PARLIAMENTARY_SITTING))
 //                            .government(csvRecord.get(GOVERNMENT))
-                            .create()
+                                    .create()
                     );
 
-                    speeches.put(id, speech);
-
-                    members.computeIfAbsent(member, s -> new ArrayList<>()).add(id);
-
                     invertedIndex.indexSpeech(speech);
+                    databaseManager.addSpeechToBatch(speech);
+                    if (SAVE_INDEX_TO_DB && counter == EXECUTE_BATCH_AFTER) {
+                        System.out.println("Saving " + id);
+                        counter = 0;
+                        databaseManager.saveInvertedIndex(invertedIndex.getIndex());
+                    }
+//                    if (counter > SAVE_AFTER) {
+//                        System.out.println("shit");
+//                        System.exit(1);
+//                    }
                 }
             }
+
+            databaseManager.flushSpeechesBatch();
+            //databaseManager.select();
 //            invertedIndex.print();
+            // invertedIndex.readMap();
+            //databaseManager.selectIndex();
 //            Scanner scanner = new Scanner(System.in);
 //            System.out.println("Yo");
 //
