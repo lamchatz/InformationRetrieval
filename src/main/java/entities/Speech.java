@@ -2,33 +2,23 @@ package entities;
 
 import java.util.Objects;
 
-public class Speech {
+public class Speech extends Entity {
     private static final String SPACE = " ";
-    private final long id;
-    private TimePeriod timePeriod;
-    private String text;
-    private int size;
+    private final String text;
+    private final int size;
+    //private final Sitting sitting;
+    //private final Member member;
+    private final int memberId;
+    private final int sittingId;
 
-    public Speech(long id) {
-        this.id = id;
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public TimePeriod getTimePeriod() {
-        return timePeriod;
-    }
-
-    public void setTimePeriod(TimePeriod timePeriod) {
-        this.timePeriod = timePeriod;
-    }
-
-    public void setText(String text) {
+    public Speech(int memberId, String text, int sittingId) {
+        super();
+        this.memberId = memberId;
         this.text = text;
         this.size = text.split(SPACE).length;
+        this.sittingId = sittingId;
     }
+
 
     public String getText() {
         return text;
@@ -38,10 +28,24 @@ public class Speech {
         return size;
     }
 
+//    public Member getMember() {return member;}
+
+    public int getMemberId() {
+        return memberId;
+    }
+
+//    public Sitting getSitting() {
+//        return sitting;
+//    }
+
+    public int getSittingId() {
+        return sittingId;
+    }
+
 
     @Override
     public String toString() {
-        return String.format("Speech{id=%s, timePeriod=%s, text=%s, size=%s}", id, timePeriod, text, size);
+        return super.toString();
     }
 
     @Override
@@ -49,11 +53,11 @@ public class Speech {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Speech speech = (Speech) o;
-        return id == speech.id;
+        return getId() == speech.getId();
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(getId());
     }
 }

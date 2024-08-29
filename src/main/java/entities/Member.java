@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
 
-public class Member {
+public class Member extends Entity {
 
     private static final String FIELD_CAN_NOT_BE_NULL_OR_EMPTY = "%s can not be null or empty";
     private static final String NAME = "name";
@@ -24,6 +24,7 @@ public class Member {
     }
 
     private Member(String name, String politicalParty, String region, String role, boolean gender) {
+        super();
         this.name = name;
         this.politicalParty = politicalParty;
         this.region = region;
@@ -52,8 +53,15 @@ public class Member {
         return role;
     }
 
-    public boolean getGender() {
+    public boolean isMale() {
         return gender;
+    }
+
+    public int getGenderAsInt() {
+        if (gender) {
+            return 1;
+        }
+        return 0;
     }
 
     public Collection<Speech> getSpeeches() {
@@ -105,25 +113,25 @@ public class Member {
         }
 
         public Builder name(String name) {
-            validateField(name, NAME);
+            //validateField(name, NAME);
             this.name = name;
             return this;
         }
 
         public Builder politicalParty(String politicalParty) {
-            validateField(politicalParty, POLITICAL_PARTY);
+            //validateField(politicalParty, POLITICAL_PARTY);
             this.politicalParty = politicalParty;
             return this;
         }
 
         public Builder region(String region) {
-            validateField(region, REGION);
+            //validateField(region, REGION);
             this.region = region;
             return this;
         }
 
         public Builder role(String role) {
-            validateField(role, ROLE);
+            //validateField(role, ROLE);
             this.role = role;
             return this;
         }
