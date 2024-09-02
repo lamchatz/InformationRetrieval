@@ -1,5 +1,7 @@
 package config;
 
+import utility.Functions;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
@@ -25,7 +27,7 @@ public class Config {
             TEST = properties.getProperty(Property.TEST_CSV_PATH.name());
             DB_URL = properties.getProperty(Property.DB_URL.name());
         } catch (IOException e) {
-            System.out.println(e);
+            Functions.println(e);
         }
     }
 }

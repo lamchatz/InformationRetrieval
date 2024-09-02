@@ -1,17 +1,13 @@
 package entities.parliament;
 
 import entities.Entity;
-import org.joda.time.LocalDate;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 
 import java.util.Objects;
 
 public class Sitting extends Entity {
 
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormat.forPattern("dd/MM/yyyy");
     private final String name;
-    private LocalDate date;
+    private String date;
 
     public Sitting(String name) {
         super();
@@ -20,14 +16,14 @@ public class Sitting extends Entity {
 
     public Sitting(String name, String date) {
         this.name = name;
-        this.date = LocalDate.parse(date, DATE_TIME_FORMATTER);
+        this.date = date;
     }
 
     public String getName() {
         return name;
     }
 
-    public LocalDate getDate() {
+    public String getDate() {
         return date;
     }
 

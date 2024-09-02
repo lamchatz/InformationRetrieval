@@ -7,30 +7,19 @@ import java.util.Objects;
 public class Member extends Entity {
 
     private static final String FIELD_CAN_NOT_BE_NULL_OR_EMPTY = "%s can not be null or empty";
-    private static final String NAME = "name";
-    private static final String POLITICAL_PARTY = "politicalParty";
-    private static final String REGION = "region";
-    private static final String ROLE = "role";
     private String name;
     private String politicalParty;
     private String region;
     private String role;
-    private boolean gender;
+    private String gender;
 
-    private Collection<Speech> speeches;
-
-    public Member() {
-        super();
-    }
-
-    private Member(String name, String politicalParty, String region, String role, boolean gender) {
+    private Member(String name, String politicalParty, String region, String role, String gender) {
         super();
         this.name = name;
         this.politicalParty = politicalParty;
         this.region = region;
         this.role = role;
         this.gender = gender;
-        this.speeches = new ArrayList<>();
     }
 
     public static Builder with() {
@@ -53,27 +42,8 @@ public class Member extends Entity {
         return role;
     }
 
-    public boolean isMale() {
+    public String getGender() {
         return gender;
-    }
-
-    public int getGenderAsInt() {
-        if (gender) {
-            return 1;
-        }
-        return 0;
-    }
-
-    public Collection<Speech> getSpeeches() {
-        return speeches;
-    }
-
-    public void addSpeech(Speech speech) {
-        speeches.add(speech);
-    }
-
-    public void print() {
-        System.out.println(this);
     }
 
     @Override
@@ -106,45 +76,35 @@ public class Member extends Entity {
         private String politicalParty;
         private String region;
         private String role;
-        private boolean gender;
+        private String gender;
 
         public Builder() {
             super();
         }
 
         public Builder name(String name) {
-            //validateField(name, NAME);
             this.name = name;
             return this;
         }
 
         public Builder politicalParty(String politicalParty) {
-            //validateField(politicalParty, POLITICAL_PARTY);
             this.politicalParty = politicalParty;
             return this;
         }
 
         public Builder region(String region) {
-            //validateField(region, REGION);
             this.region = region;
             return this;
         }
 
         public Builder role(String role) {
-            //validateField(role, ROLE);
             this.role = role;
             return this;
         }
 
-        public Builder gender(boolean gender) {
+        public Builder gender(String gender) {
             this.gender = gender;
             return this;
-        }
-
-        private void validateField(String field, String fieldName) {
-            if (field == null || field.isBlank()) {
-                throw new IllegalStateException(String.format(FIELD_CAN_NOT_BE_NULL_OR_EMPTY, fieldName));
-            }
         }
 
         public Member create() {

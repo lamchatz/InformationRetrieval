@@ -12,6 +12,7 @@ import entities.parliament.Processor;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import utility.Functions;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -69,7 +70,7 @@ public class Reader {
                             .politicalParty(csvRecord.get(POLITICAL_PARTY))
                             .region(csvRecord.get(MEMBER_REGION))
                             .role(csvRecord.get(ROLES))
-                            .gender(parseGender(csvRecord.get(MEMBER_GENDER)))
+                            .gender(csvRecord.get(MEMBER_GENDER))
                             .create();
 
                     memberRepository.addToBatch(member);
@@ -95,30 +96,23 @@ public class Reader {
                 speechRepository.addToBatch(speech);
 
                 if (counter == EXECUTE_BATCH_AFTER) {
-                    System.out.println(id);
+                    Functions.println(id);
                     counter = 0;
                     invertedIndexRepository.save(invertedIndex);
                 }
             }
 
+            Functions.println("Flushing parliament records...");
             parliamentProcessor.flush();
+            Functions.println("Flushing speech records...");
             speechRepository.flushBatch();
+            Functions.println("Saving invertedIndex...");
             invertedIndexRepository.save(invertedIndex);
+            Functions.println("Flushing member records...");
             memberRepository.flushBatch();
 
         } catch (IOException e) {
-            System.out.println(e);
+            e.printStackTrace();
         }
     }
-
-    private static boolean parseGender(String gender) {
-        return gender.equalsIgnoreCase("male");
-    }
-
-    private static void processInvertedIndex() {
-    }
-
-    ;
-
-
 }

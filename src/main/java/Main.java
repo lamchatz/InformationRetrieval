@@ -1,6 +1,7 @@
 import config.Config;
 import csv.Reader;
 import database.DatabaseManager;
+import utility.Functions;
 
 import java.util.Scanner;
 
@@ -16,30 +17,11 @@ public class Main {
         }
 
         SearchEngine searchEngine = new SearchEngine();
-//
-        System.out.println("Searching... ");
 
-        searchEngine.search("αποκατάσταση κανεις τραγωδία ΣΗΜΑΝΤΙΚΌ");
+        Functions.println("Searching... ");
 
-//        searchEngine.search("συνάδελφε", "σακοραφα ηλια");
-    }
+        searchEngine.search("συνεδριαση αποκατάσταση");
 
-    private static void read() {
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Search for:");
-
-        String input = scanner.nextLine();
-
-//        Map<Long, Long> map = invertedIndex.search(input);
-//
-//        Optional<Map.Entry<Long, Long>> max = map.entrySet()
-//                .stream().max(Map.Entry.comparingByValue());
-//
-//        if (max.isPresent()) {
-//            Long idS = max.get().getKey();
-//            System.out.println(s);
-//        }
-
-        scanner.close();
+        //searchEngine.search("αποκατάσταση κανεις τραγωδία ΣΗΜΑΝΤΙΚΌ");
     }
 }

@@ -39,27 +39,6 @@ public class Processor {
         periodRepository.save(lastPeriod);
     }
 
-    private void printPeriod(Period period) {
-        println("Last Period: " + period.getName());
-        for (Session session : period.getSessions()) {
-            println("Session: " + session.getName());
-            print("Sittings: ");
-            for (Sitting sitting : session.getSittings()) {
-                print(sitting.getName() + ", ");
-            }
-            println("");
-        }
-        println("~~~~~~~~~~~~~~");
-    }
-
-    public void println(String text) {
-        System.out.println(text);
-    }
-
-    public void print(String text) {
-        System.out.print(text);
-    }
-
     public int getSittingId(String sessionName, String sittingName) {
         return lastPeriod.getSitting(sessionName, sittingName);
     }
