@@ -15,43 +15,25 @@ public class Processor {
     public Processor() {
         this.lastPeriod = new Period("");
         this.periodNames = new HashSet<>(1);
+        this.periodNames.add("");
         this.sessionNames = new HashSet<>();
         this.sittingNames = new HashSet<>();
 
         this.periodRepository = new PeriodRepository();
     }
 
-
     public void process(String periodName, String sessionName, String sittingName, String sittingDate) {
-        boolean createNew = false;
-
         if (!periodNames.contains(periodName)) {
             periodNames.clear();
-            sessionNames.clear();
-            sittingNames.clear();
             periodNames.add(periodName);
 
-            if (!"".equals(lastPeriod.getName())) {
-                createNew = true;
-                periodRepository.save(lastPeriod);
-            }
+            periodRepository.save(lastPeriod);
 
             lastPeriod = new Period(periodName);
         }
-
-        if (sittingNames.add(sittingName)) {
-            createNew = true;
-        }
-
-        if (sessionNames.add(sessionName)) {
-            createNew = true;
-            sittingNames.clear();
-        }
-
-        if (createNew) {
-            managePeriodSessionAndSitting(lastPeriod, sessionName, sittingName, sittingDate);
-        }
+        managePeriodSessionAndSitting(lastPeriod, sessionName, sittingName, sittingDate);
     }
+
 
     public void flush() {
         periodRepository.save(lastPeriod);

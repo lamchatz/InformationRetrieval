@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.util.Map;
 
 public class InvertedIndexRepository implements AbstractRepository<InvertedIndex> {
+
     private static final String INSERT_INTO_INVERTED_INDEX = "INSERT INTO INVERTED_INDEX (WORD, SPEECH_ID, COUNTER) VALUES (?, ?, ?) ON CONFLICT(WORD, SPEECH_ID) DO UPDATE SET COUNTER = COUNTER + excluded.COUNTER";
     private static final String SELECT_SPEECH_BY_WORD = "SELECT SPEECH.ID AS SPEECH_ID, SPEECH.CONTENT AS SPEECH_CONTENT, INVERTED_INDEX.COUNTER AS COUNTER " +
             "FROM INVERTED_INDEX " +
@@ -69,6 +70,7 @@ public class InvertedIndexRepository implements AbstractRepository<InvertedIndex
     public InvertedIndex getByName(String name) {
         return null;
     }
+
 
 //    public void ss(String word) {
 //        try (Connection connection = DatabaseManager.connect();

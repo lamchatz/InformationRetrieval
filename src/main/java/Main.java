@@ -7,16 +7,22 @@ import java.util.Scanner;
 public class Main {
 
     public static void main(String[] args) {
-        DatabaseManager.init();
 
         if (Config.DROP_AND_RECREATE_TABLES) {
+            DatabaseManager.init();
             Reader.read();
+            DatabaseManager.createTableIndexes();
+            DatabaseManager.createIDF_TF_RelatedTables();
         }
 
-        //new InvertedIndexRepository().ss("δημοκρατια");
-        //new PeriodRepository().getByName("entities.parliament 18 review 9");
-    }
+        SearchEngine searchEngine = new SearchEngine();
+//
+        System.out.println("Searching... ");
 
+        searchEngine.search("αποκατάσταση κανεις τραγωδία ΣΗΜΑΝΤΙΚΌ");
+
+//        searchEngine.search("συνάδελφε", "σακοραφα ηλια");
+    }
 
     private static void read() {
         Scanner scanner = new Scanner(System.in);

@@ -37,6 +37,7 @@ public class Reader {
     public static final String SPEECH = "speech";
     private static final String[] HEADER = {MEMBER_NAME, SITTING_DATE, PARLIAMENTARY_PERIOD, PARLIAMENTARY_SESSION, PARLIAMENTARY_SITTING, POLITICAL_PARTY, GOVERNMENT, MEMBER_REGION, ROLES, MEMBER_GENDER, SPEECH};
     private static final String[] HEADER2 = {MEMBER_NAME, POLITICAL_PARTY, SPEECH};
+    private static final String ANONYMOUS = "Anonymous";
 
     public static void read() {
         InvertedIndex invertedIndex = new InvertedIndex();
@@ -48,7 +49,7 @@ public class Reader {
         MemberRepository memberRepository = new MemberRepository();
         SpeechRepository speechRepository = new SpeechRepository();
 
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.BIG))) {
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.NORMAL))) {
             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader(HEADER).withFirstRecordAsHeader());
 
             long counter = 0;
@@ -56,44 +57,47 @@ public class Reader {
             for (CSVRecord csvRecord : csvParser) {
                 id = csvRecord.getRecordNumber();
                 String name = csvRecord.get(MEMBER_NAME);
-                if (name != null && !name.isBlank()) {
-                    counter++;
 
-                    if (!members.containsKey(name)) {
-                        Member member = Member.with().name(name)
-                                .politicalParty(csvRecord.get(POLITICAL_PARTY))
-                                .region(csvRecord.get(MEMBER_REGION))
-                                .role(csvRecord.get(ROLES))
-                                .gender(parseGender(csvRecord.get(MEMBER_GENDER)))
-                                .create();
+                if (name == null || name.isBlank()) {
+                    name = ANONYMOUS;
+                }
 
-                        memberRepository.addToBatch(member);
-                        members.put(name, member.getId());
-                    }
+                counter++;
 
-                    String sessionName = csvRecord.get(PARLIAMENTARY_SESSION);
-                    String sittingName = csvRecord.get(PARLIAMENTARY_SITTING);
+                if (!members.containsKey(name)) {
+                    Member member = Member.with().name(name)
+                            .politicalParty(csvRecord.get(POLITICAL_PARTY))
+                            .region(csvRecord.get(MEMBER_REGION))
+                            .role(csvRecord.get(ROLES))
+                            .gender(parseGender(csvRecord.get(MEMBER_GENDER)))
+                            .create();
 
-                    parliamentProcessor.process(csvRecord.get(PARLIAMENTARY_PERIOD),
-                            sessionName,
-                            sittingName,
-                            csvRecord.get(SITTING_DATE));
+                    memberRepository.addToBatch(member);
+                    members.put(name, member.getId());
+                }
 
-                    //governments.add(Government.processGovernment(csvRecord.get(GOVERNMENT)));
+                String sessionName = csvRecord.get(PARLIAMENTARY_SESSION);
+                String sittingName = csvRecord.get(PARLIAMENTARY_SITTING);
 
-                    Speech speech = new Speech(members.get(name),
-                            csvRecord.get(SPEECH),
-                            parliamentProcessor.getSittingId(sessionName, sittingName)
-                    );
+                parliamentProcessor.process(csvRecord.get(PARLIAMENTARY_PERIOD),
+                        sessionName,
+                        sittingName,
+                        csvRecord.get(SITTING_DATE));
 
-                    invertedIndex.indexSpeech(speech);
-                    speechRepository.addToBatch(speech);
+                //governments.add(Government.processGovernment(csvRecord.get(GOVERNMENT)));
 
-                    if (counter == EXECUTE_BATCH_AFTER) {
-                        System.out.println(id);
-                        counter = 0;
-                        invertedIndexRepository.save(invertedIndex);
-                    }
+                Speech speech = new Speech(members.get(name),
+                        csvRecord.get(SPEECH),
+                        parliamentProcessor.getSittingId(sessionName, sittingName)
+                );
+
+                invertedIndex.indexSpeech(speech);
+                speechRepository.addToBatch(speech);
+
+                if (counter == EXECUTE_BATCH_AFTER) {
+                    System.out.println(id);
+                    counter = 0;
+                    invertedIndexRepository.save(invertedIndex);
                 }
             }
 

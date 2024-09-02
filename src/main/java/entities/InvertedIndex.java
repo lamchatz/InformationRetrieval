@@ -14,46 +14,48 @@ public class InvertedIndex {
             "ήμασταν", "πού", "έχετε", "είχα", "είχες", "είχε", "είχαμε", "είχατε", "είχαν", "έχουν", "ποιο", "ποιος", "ποιός", "ναι",
             "όχι", "όποιος", "όποια", "οποία", "οποίο", "οποίοι", "ετών", "επομένως", "γίνονται", "γίνονταν", "αριθμό", "γράψει", "μιλώ", "μιλάω",
             "συμβαίνει", "συμβαίνουν", "μιας", "είσασταν", "πήγαμε", "θέμα", "θέλω", "είμεθα", "γνωρίζετε", "εκάστοτε", "ίδια", "ίδιο", "ίδιος",
-            "θέση", "οποίo", "τοσο", "αντί");
+            "θέση", "οποίo", "τοσο", "αντί", "ευχαριστώ", "λόγο", "πολύ", "αυτά", "πρέπει", "δύο", "όλα", "εδώ",
+            "νέα", "εκεί", "μόνο", "στις", "μετά", "ήταν", "κάνει", "προς", "όλοι", "γίνει", "είπε", "επίσης", "όπου", "άλλο",
+            "αυτές", "επί", "έξι", "λέω", "πάρα", "όταν", "ώστε", "ακόμα", "κάθε", "όλες", "όλους", "ήδη", "μπορούν", "έγινε",
+            "πει", "πλέον", "όσο", "ώρα", "πολλά", "πριν", "όλο", "λέμε", "πάλι", "πιο", "σαν", "τρεις", "βέβαια", "είπα",
+            "όλη", "δυο", "πάει", "ποτέ", "τρία", "δώδεκα", "εντός", "λένε", "λέτε", "ξέρω", "πέντα", "ποιοι", "λέει");
     private static final String SPACE = " ";
     private static final String WHITESPACE = "\\s";
     private static final String REGEX = "[.!«¶»@#$%…^&*()_=+<>/?‘;'\",:\\[\\]\\t\\s-]";
 
     private static long i;
-    private long counter;
     private Map<String, Map<Integer, Long>> index;
 
     public InvertedIndex() {
         this.index = new HashMap<>();
-        this.counter = 0;
-        i = 0;
     }
 
     public void indexSpeech(Speech speech) {
         for (String word : speech.getText().toLowerCase().replaceAll(REGEX, SPACE).split(WHITESPACE)) {
-            if (!COMMON_WORDS.contains(word) && word.length() > 2) {
+            if (!COMMON_WORDS.contains(word) && word.length() > 2 && containsOnlyLetters(word)) {
                 index.computeIfAbsent(word, w -> new HashMap<>()).merge(speech.getId(), 1L, Long::sum);
             }
         }
-
-        // counter++;
     }
 
-    private void processAndSetWords(String speech) {
-
+    private boolean containsOnlyLetters(String word) {
+        for (char c : word.toCharArray()) {
+            if (!Character.isLetter(c)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public Map<String, Map<Integer, Long>> getIndex() {
         return index;
     }
 
+
     public Map<Integer, Long> search(String word) {
         return index.get(word);
     }
 
-    public void printI() {
-        System.out.println(i + " of " + counter);
-    }
 
     public void print() {
         index.entrySet().forEach(System.out::println);

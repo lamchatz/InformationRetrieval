@@ -12,7 +12,7 @@ import java.util.Collection;
 
 public class SpeechRepository implements AbstractBatchRepository<Speech> {
 
-    protected static final String INSERT_INTO_SPEECH = "INSERT INTO SPEECH(CONTENT, MEMBER_ID, SITTING_ID) VALUES (?, ?, ?)";
+    protected static final String INSERT_INTO_SPEECH = "INSERT INTO SPEECH(ID, CONTENT, MEMBER_ID, SITTING_ID) VALUES (?, ?, ?, ?)";
     private static final int MINUS_ONE = -1;
 
     private Collection<Speech> batchSpeeches;
@@ -47,13 +47,12 @@ public class SpeechRepository implements AbstractBatchRepository<Speech> {
                 int sittingId = speech.getSittingId();
 
                 if (sittingId != MINUS_ONE) {
-                    preparedStatement.setString(1, speech.getText());
-                    preparedStatement.setInt(2, speech.getMemberId());
-                    preparedStatement.setInt(3, sittingId);
+                    preparedStatement.setInt(1, speech.getId());
+                    preparedStatement.setString(2, speech.getText());
+                    preparedStatement.setInt(3, speech.getMemberId());
+                    preparedStatement.setInt(4, sittingId);
 
                     preparedStatement.addBatch();
-                } else {
-                    System.out.println("hmm");
                 }
             }
 

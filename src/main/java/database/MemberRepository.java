@@ -7,13 +7,17 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
 public class MemberRepository implements AbstractBatchRepository<Member> {
 
-    protected static final String INSERT_INTO_MEMBER = "INSERT INTO MEMBER (ID, NAME, POLITICAL_PARTY, REGION, ROLE, GENDER) " +
+    protected static final String INSERT_INTO_MEMBER = "INSERT INTO MEMBER (ID, FIRST_NAME, MIDDLE_NAME, LAST_NAME, POLITICAL_PARTY, REGION, ROLE, GENDER) " +
             "VALUES (?, ?, ?, ?, ?, ?)";
+
+    private static final String SELECT_MEMBER_IDS_BY_NAME = "SELECT ID FROM MEMBER WHERE NAME like ?";
     private Set<Member> batchMembers;
 
     public MemberRepository() {
@@ -84,6 +88,25 @@ public class MemberRepository implements AbstractBatchRepository<Member> {
         } catch (SQLException e) {
             System.out.println(e);
         }
+    }
+
+    public Collection<Integer> selectMemberIdsByName(String name) {
+        Collection<Integer> memberIds = new ArrayList<>();
+
+        try (Connection connection = DatabaseManager.connect();
+             PreparedStatement selectMemberIdsByName = connection.prepareStatement(SELECT_MEMBER_IDS_BY_NAME)) {
+            selectMemberIdsByName.setString(1, '%' + name + '%');
+
+            try (ResultSet resultSet = selectMemberIdsByName.executeQuery()) {
+                while (resultSet.next()) {
+                    memberIds.add(resultSet.getInt("ID"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return memberIds;
     }
 
 
