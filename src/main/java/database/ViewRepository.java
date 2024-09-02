@@ -31,24 +31,27 @@ public class ViewRepository {
     private static final String WORD = "WORD";
     private static final String IDF = "IDF";
     private static final String SINGLE_QUOTE = "'";
-    private static final String WHERE_WORD_IN_ = "WHERE WORD IN ";
+    private static final String SINGLE_QUOTE_PARENTHESIS = "') ";
     private static final String SPACE = " ";
+    private static final String SINGLE_QUOTE_WITH_SPACE = "' ";
+    private static final String PERCENTAGE_SINGLE_QUOTE_WITH_SPACE = "%' ";
+    private static final String WHERE_WORD_IN_ = "WHERE WORD IN ";
+    private static final String WHERE_WORD = "WHERE WORD = '";
     private static final String JOIN_SPEECH_ON_TOTAL_SPEECH_WORDS = "JOIN SPEECH ON (TOTAL_SPEECH_WORDS.SPEECH_ID = SPEECH.ID) ";
     private static final String JOIN_MEMBER_ON_SPEECH = "JOIN MEMBER ON (SPEECH.MEMBER_ID = MEMBER.ID) ";
     private static final String JOIN_SITTING_ON_SPEECH = "JOIN SITTING ON (SPEECH.SITTING_ID = SITTING.ID) ";
+    private static final String JOIN_SESSION_ON_SITTING = "JOIN SESSION ON (SITTING.SESSION_ID = SESSION.ID) ";
+    private static final String AND_MEMBER_NAME_LIKE = "AND MEMBER.NAME LIKE '%";
     private static final String AND_SITTING_DATE_LESS_THAN = "AND DATE <= '";
     private static final String AND_SITTING_DATE_GREATER_THAN = "AND DATE >= '";
-    private static final String SINGLE_QUOTE_WITH_SPACE = "' ";
-    private static final String AND_MEMBER_NAME_LIKE = "AND MEMBER.NAME LIKE '%";
-    private static final String PERCENTAGE_SINGLE_QUOTE_WITH_SPACE = "%' ";
-    private static final String WHERE_WORD = "WHERE WORD = '";
+    private static final String AND_SESSION_NAME = "AND (SESSION.NAME = '";
+    private static final String OR_SESSION_PERIOD_NAME = "' OR SESSION.PERIOD_NAME = '";
 
     public ViewRepository() {
         super();
     }
 
     public double getIdfValueOfWord(String word) {
-        Functions.println("Searching idf value of " + word);
         double idf = 0.0;
 
         try (Connection connection = DatabaseManager.connect();
@@ -66,13 +69,10 @@ public class ViewRepository {
             e.printStackTrace();
         }
 
-        Functions.println("IDF value of " + word + ": " + idf);
-
         return Math.log(1 + idf);
     }
 
     public Map<String, Double> getPossibleIdfValuesOfWordWithoutAccent(String word) {
-        Functions.println("Searching idf value of " + word + " without accent");
         Map<String, Double> possibleIdfValuesOfWord = new HashMap<>();
 
         try (Connection connection = DatabaseManager.connect();
@@ -85,8 +85,6 @@ public class ViewRepository {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
-        Functions.println("possible IDF values of " + word + ": " + possibleIdfValuesOfWord);
 
         return possibleIdfValuesOfWord;
     }
@@ -114,9 +112,6 @@ public class ViewRepository {
 
         String s = BASE_SELECT_TF_VALUE_OF_WORD + createTFValueOfWordQueryFor(whereClause, args);
 
-        Functions.println(s);
-        Functions.println("searching tf value for: " + searchWord);
-
         try (Connection connection = DatabaseManager.connect();
              ResultSet resultSet = connection.prepareStatement(s).executeQuery()) {
             while (resultSet.next()) {
@@ -128,7 +123,6 @@ public class ViewRepository {
             e.printStackTrace();
         }
 
-        Functions.println("TF for " + searchWord + ": " + tfOfSpeeches);
         return tfOfSpeeches;
     }
 
@@ -138,7 +132,7 @@ public class ViewRepository {
         StringBuilder whereClause = new StringBuilder(WHERE_WORD_IN_).append(Functions.generateInClauseFor(Functions.generateAccentVariants(searchWord))).append(SPACE);
         String s = BASE_SELECT_TF_VALUE_OF_WORD_WITHOUT_ACCENT + createTFValueOfWordQueryFor(whereClause, args);
 
-        Functions.println("Searching for: " + searchWord + " without accent");
+        Functions.println(s);
 
         try (Connection connection = DatabaseManager.connect();
              ResultSet resultSet = connection.prepareStatement(s).executeQuery()) {
@@ -159,10 +153,6 @@ public class ViewRepository {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
-        Functions.println(s);
-
-        Functions.println("TF for " + searchWord + " without accent: " + tfOfSpeechesForWord);
 
         return tfOfSpeechesForWord;
     }
@@ -202,12 +192,31 @@ public class ViewRepository {
             if (Functions.isNotEmpty(to)) {
                 if (!joinedSpeech) {
                     joins.append(JOIN_SPEECH_ON_TOTAL_SPEECH_WORDS);
+                    joinedSpeech = true;
+                }
+                if (!joinedSitting) {
+                    joins.append(JOIN_SITTING_ON_SPEECH);
+                    joinedSitting = true;
+                }
+
+                whereClause.append(AND_SITTING_DATE_LESS_THAN).append(to).append(SINGLE_QUOTE);
+            }
+        }
+
+        if (args.length > 4) {
+            String periodOrSession = args[4];
+            if (Functions.isNotEmpty(periodOrSession)) {
+                if (!joinedSpeech ) {
+                    joins.append(JOIN_SPEECH_ON_TOTAL_SPEECH_WORDS);
                 }
                 if (!joinedSitting) {
                     joins.append(JOIN_SITTING_ON_SPEECH);
                 }
 
-                whereClause.append(AND_SITTING_DATE_LESS_THAN).append(to).append(SINGLE_QUOTE);
+                joins.append(JOIN_SESSION_ON_SITTING);
+
+                whereClause.append(AND_SESSION_NAME).append(periodOrSession)
+                        .append(OR_SESSION_PERIOD_NAME).append(periodOrSession).append(SINGLE_QUOTE_PARENTHESIS);
             }
         }
 

@@ -36,7 +36,8 @@ public class SpeechRepository {
             "JOIN MEMBER ON (SPEECH.MEMBER_ID = MEMBER.ID) " +
             "JOIN SITTING ON (SPEECH.SITTING_ID = SITTING.ID) " +
             "JOIN SESSION ON (SITTING.SESSION_ID = SESSION.ID) " +
-            "JOIN PERIOD ON (SESSION.PERIOD_NAME = PERIOD.NAME)";
+            "JOIN PERIOD ON (SESSION.PERIOD_NAME = PERIOD.NAME) " +
+            "WHERE SPEECH.ID IN ";
     protected static final String INSERT_INTO_SPEECH = "INSERT INTO SPEECH(ID, CONTENT, MEMBER_ID, SITTING_ID) VALUES (?, ?, ?, ?)";
     private Collection<Speech> batchSpeeches;
 
@@ -92,26 +93,27 @@ public class SpeechRepository {
     public Collection<InfoToShow> getAllInfoFor(Set<Integer> speechIds) {
         Collection<InfoToShow> infoToShowCollection = new ArrayList<>();
 
-        Functions.generateInClauseFor(speechIds);
-        try (Connection connection = DatabaseManager.connect();
-             ResultSet resultSet = connection.prepareStatement(SELECT_ALL_INFO_TO_SHOW).executeQuery()) {
+        if (!speechIds.isEmpty()) {
+            try (Connection connection = DatabaseManager.connect();
+                 ResultSet resultSet = connection.prepareStatement(SELECT_ALL_INFO_TO_SHOW + Functions.generateInClauseFor(speechIds)).executeQuery()) {
 
-            while (resultSet.next()) {
-                dto.Speech speech = new dto.Speech(resultSet.getString("CONTENT"));
-                Member member = new Member(resultSet.getString(MEMBER_NAME),
-                        resultSet.getString(POLITICAL_PARTY),
-                        resultSet.getString(REGION),
-                        resultSet.getString(ROLE)
-                );
-                Period period = new Period(resultSet.getString(PERIOD_NAME),
-                        resultSet.getString(SESSION_NAME),
-                        resultSet.getString(SITTING_NAME)
-                );
+                while (resultSet.next()) {
+                    dto.Speech speech = new dto.Speech(resultSet.getString("CONTENT"));
+                    Member member = new Member(resultSet.getString(MEMBER_NAME),
+                            resultSet.getString(POLITICAL_PARTY),
+                            resultSet.getString(REGION),
+                            resultSet.getString(ROLE)
+                    );
+                    Period period = new Period(resultSet.getString(PERIOD_NAME),
+                            resultSet.getString(SESSION_NAME),
+                            resultSet.getString(SITTING_NAME)
+                    );
 
-                infoToShowCollection.add(new InfoToShow(speech, member, period));
+                    infoToShowCollection.add(new InfoToShow(speech, member, period));
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
 
         return infoToShowCollection;

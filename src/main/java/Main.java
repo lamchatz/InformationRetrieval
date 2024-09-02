@@ -20,7 +20,7 @@ public class Main {
 
         Functions.println("Searching... ");
 
-        searchEngine.search("συνεδριαση αποκατάσταση");
+        searchEngine.search("συνεδριαση", "", "", "", "session 1");
 
         //searchEngine.search("αποκατάσταση κανεις τραγωδία ΣΗΜΑΝΤΙΚΌ");
     }

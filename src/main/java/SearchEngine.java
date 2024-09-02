@@ -25,7 +25,7 @@ public class SearchEngine {
     }
 
     public void search(String... args) {
-        if (args.length > 4) {
+        if (args.length > 5) {
             throw new IllegalArgumentException("More than 4 arguments given!");
         }
 
@@ -45,25 +45,29 @@ public class SearchEngine {
 
             getTopSpeeches(accumulators);
 
-            ss(speechRepository.getAllInfoFor(accumulators.keySet()));
+            printAccordingToUserInput(speechRepository.getAllInfoFor(accumulators.keySet()));
         }
     }
 
-    private void ss(Collection<InfoToShow> infos) {
-        Functions.println("Do you want to view the results?");
-        Scanner scanner = new Scanner(System.in);
-        String input = scanner.nextLine();
-        Iterator<InfoToShow> iterator = infos.iterator();
+    private void printAccordingToUserInput(Collection<InfoToShow> infos) {
+        if (!infos.isEmpty()) {
+            Functions.println("Do you want to view the results?");
+            Scanner scanner = new Scanner(System.in);
+            String input = scanner.nextLine();
+            Iterator<InfoToShow> iterator = infos.iterator();
 
-        while ("y".equalsIgnoreCase(input) && iterator.hasNext()) {
-            Functions.println(iterator.next());
+            while ("y".equalsIgnoreCase(input) && iterator.hasNext()) {
+                Functions.println(iterator.next());
 
-            Functions.println("Continue? ");
-            input = scanner.nextLine();
-            Functions.println("");
+                Functions.println("Continue? ");
+                input = scanner.nextLine();
+                Functions.println("");
+            }
+
+            scanner.close();
+        } else {
+            Functions.println("No matches found...");
         }
-
-        scanner.close();
     }
 
 
@@ -80,27 +84,29 @@ public class SearchEngine {
         Map<String, Double> possibleIdfValues = viewRepository.getPossibleIdfValuesOfWordWithoutAccent(searchWord);
         Map<String, Map<Integer, Double>> tfOfSpeechesForWord = viewRepository.selectTFValueOfWordWithoutAccent(searchWord, args);
 
-        for (String word : possibleIdfValues.keySet()) {
-            Double idf = possibleIdfValues.get(word);
+        if (!tfOfSpeechesForWord.isEmpty()) {
+            for (String word : possibleIdfValues.keySet()) {
+                Double idf = possibleIdfValues.get(word);
 
-            Map<Integer, Double> speechAccumulators = new HashMap<>();
+                Map<Integer, Double> speechAccumulators = new HashMap<>();
 
-            Map<Integer, Double> tfOfSpeeches = tfOfSpeechesForWord.get(word);
+                Map<Integer, Double> tfOfSpeeches = tfOfSpeechesForWord.get(word);
 
-            tfOfSpeeches.forEach((speechId, tfValue) ->
-                    speechAccumulators.merge(speechId, tfValue * idf, Double::sum));
+                tfOfSpeeches.forEach((speechId, tfValue) ->
+                        speechAccumulators.merge(speechId, tfValue * idf, Double::sum));
 
-            accumulatorsForWord.putIfAbsent(word, speechAccumulators);
+                accumulatorsForWord.putIfAbsent(word, speechAccumulators);
+            }
+
+            Map<Integer, Double> highestScores = accumulatorsForWord.values().stream()
+                    .flatMap(wordScores -> wordScores.entrySet().stream())
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue,
+                            Double::max));
+
+            highestScores.forEach((speechId, sum) -> searchAccumulators.merge(speechId, sum, Double::sum));
         }
-
-        Map<Integer, Double> highestScores = accumulatorsForWord.values().stream()
-                .flatMap(wordScores -> wordScores.entrySet().stream())
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        Double::max));
-
-        highestScores.forEach((speechId, sum) -> searchAccumulators.merge(speechId, sum, Double::sum));
     }
 
     private void normalizeValues(Map<Integer, Double> accumulators) {
