@@ -6,12 +6,11 @@ import java.util.Objects;
 
 public class Member extends Entity {
 
-    private static final String FIELD_CAN_NOT_BE_NULL_OR_EMPTY = "%s can not be null or empty";
-    private String name;
-    private String politicalParty;
-    private String region;
-    private String role;
-    private String gender;
+    private final String name;
+    private final String politicalParty;
+    private final String region;
+    private final String role;
+    private final String gender;
 
     private Member(String name, String politicalParty, String region, String role, String gender) {
         super();

@@ -14,13 +14,9 @@ public class DatabaseManager {
             "CONTENT TEXT, " +
             "MEMBER_ID INTEGER, " +
             "SITTING_ID INTEGER, " +
+            "TOTAL_WORDS INTEGER, " +
             "FOREIGN KEY (MEMBER_ID) REFERENCES MEMBER(ID), " +
             "FOREIGN KEY (SITTING_ID) REFERENCES SITTING(ID))";
-    private static final String CREATE_INVERTED_INDEX_TABLE = "CREATE TABLE IF NOT EXISTS INVERTED_INDEX (" +
-            "WORD TEXT NOT NULL, " +
-            "SPEECH_ID INTEGER NOT NULL, " +
-            "COUNTER INTEGER NOT NULL, " +
-            "PRIMARY KEY (WORD, SPEECH_ID))";
     private static final String CREATE_MEMBER_TABLE = "CREATE TABLE IF NOT EXISTS MEMBER (" +
             "ID INTEGER, " +
             "NAME TEXT, " +
@@ -41,39 +37,30 @@ public class DatabaseManager {
             "SESSION_ID INTEGER, " +
             "PRIMARY KEY (ID), " +
             "FOREIGN KEY(SESSION_ID) REFERENCES SESSION(ID))";
-    private static final String CREATE_NUMBER_OF_SPEECHES_WITH_WORD_TABLE = "CREATE TABLE IF NOT EXISTS NUMBER_OF_SPEECHES_WITH_WORD AS " +
-            "SELECT COUNT(WORD) AS WORD_FREQUENCY, WORD " +
-            "FROM INVERTED_INDEX " +
-            "GROUP BY WORD";
 
-    private static final String CREATE_IDF_TABLE = "CREATE TABLE IF NOT EXISTS IDF AS " +
-            "SELECT (TOTAL_SPEECHES / (WORD_FREQUENCY * 1.0)) AS IDF, WORD " +
-            "FROM NUMBER_OF_SPEECHES_WITH_WORD, (SELECT COUNT(ID) AS TOTAL_SPEECHES FROM SPEECH)";
-
-    private static final String CREATE_TOTAL_SPEECH_WORDS_TABLE = "CREATE TABLE IF NOT EXISTS TOTAL_SPEECH_WORDS AS " +
-            "SELECT SUM(COUNTER) AS TOTAL_WORDS, SPEECH_ID " +
-            "FROM INVERTED_INDEX " +
-            "GROUP BY SPEECH_ID";
-
+    private static final String CREATE_WORD_FREQUENCY_TABLE = "CREATE TABLE IF NOT EXISTS WORD_FREQUENCY (" +
+            "WORD TEXT, " +
+            "FREQUENCY INTEGER, " +
+            "PRIMARY KEY (WORD))";
+    private static final String CREATE_TF_TABLE = "CREATE TABLE IF NOT EXISTS TF (TF REAL, WORD TEXT, SPEECH_ID INTEGER, " +
+            "FOREIGN KEY(SPEECH_ID) REFERENCES SPEECH(ID))";
+    private static final String CREATE_IDF_TF_TABLE = "CREATE TABLE IF NOT EXISTS IDF_TF " +
+            "AS SELECT (ROUND((%d / (FREQUENCY * 1.0)), 8))* TF AS SCORE, TF.WORD, SPEECH_ID " +
+            "FROM TF " +
+            "JOIN WORD_FREQUENCY ON TF.WORD = WORD_FREQUENCY.WORD";
     private static final String DROP_SPEECH_TABLE = "DROP TABLE IF EXISTS SPEECH";
-    private static final String DROP_INVERTED_INDEX_TABLE = "DROP TABLE IF EXISTS INVERTED_INDEX";
     private static final String DROP_MEMBER_TABLE = "DROP TABLE IF EXISTS MEMBER";
     private static final String DROP_PERIOD_TABLE = "DROP TABLE IF EXISTS PERIOD";
     private static final String DROP_SESSION_TABLE = "DROP TABLE IF EXISTS SESSION";
     private static final String DROP_SITTING_TABLE = "DROP TABLE IF EXISTS SITTING";
-    private static final String DROP_NUMBER_OF_SPEECHES_WITH_WORD_TABLE = "DROP TABLE IF EXISTS NUMBER_OF_SPEECHES_WITH_WORD";
-    private static final String DROP_IDF_TABLE = "DROP TABLE IF EXISTS IDF";
-    private static final String DROP_TOTAL_SPEECH_WORDS_TABLE = "DROP TABLE IF EXISTS TOTAL_SPEECH_WORDS";
+    private static final String DROP_TF_TABLE = "DROP TABLE IF EXISTS TF";
+    private static final String DROP_NUMBER_OF_SPEECHES_WITH_WORD_TABLE = "DROP TABLE IF EXISTS WORD_FREQUENCY";
 
     //INDEXES
-    private static final String CREATE_WORD_INDEX = "CREATE INDEX IF NOT EXISTS INDEX_WORD ON INVERTED_INDEX (WORD)";
-    private static final String CREATE_SPEECH_ID_INDEX = "CREATE INDEX IF NOT EXISTS INDEX_SPEECH_ID ON INVERTED_INDEX(SPEECH_iD)";
-    private static final String CREATE_IDF_WORD_INDEX = "CREATE INDEX IF NOT EXISTS IDF_WORD_INDEX ON IDF (WORD)";
-    private static final String CREATE_TOTAL_SPEECH_WORDS_VIEW_SPEECH_ID_INDEX = "CREATE INDEX IF NOT EXISTS TOTAL_SPEECH_WORDS_SPEECH_VIEW_SPEECH_ID " +
-            "ON TOTAL_SPEECH_WORDS (SPEECH_ID)";
-    private static final String CREATE_NUMBER_OF_SPEECHES_WITH_WORD_WORD_INDEX = "CREATE INDEX IF NOT EXISTS NUMBER_OF_SPEECHES_WITH_WORD_WORD_INDEX " +
-            "ON NUMBER_OF_SPEECHES_WITH_WORD (WORD)";
-
+    private static final String CREATE_TF_WORD_INDEX = "CREATE INDEX IF NOT EXISTS TF_WORD_INDEX ON TF(WORD)";
+    private static final String CREATE_IDF_TF_WORD_INDEX = "CREATE INDEX IF NOT EXISTS IDF_TF_WORD_INDEX ON IDF_TF(WORD)";
+    private static final String CREATE_IDF_TF_SPEECH_ID_INDEX = "CREATE INDEX IF NOT EXISTS IDF_TF_SPEECH_ID_INDEX ON IDF_TF(SPEECH_ID)";
+    private static final String DROP_IDF_TF_TABLE = "DROP TABLE IF EXISTS IDF_TF";
 
     public static void main(String[] args) {
         new DatabaseManager();
@@ -88,7 +75,6 @@ public class DatabaseManager {
              Statement statement = connection.createStatement()) {
             dropTables(statement);
             createTables(statement);
-            //createTableIndexes(statement);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -110,11 +96,11 @@ public class DatabaseManager {
             statement.execute(DROP_SESSION_TABLE);
             statement.execute(DROP_SITTING_TABLE);
             statement.execute(DROP_MEMBER_TABLE);
-            statement.execute(DROP_INVERTED_INDEX_TABLE);
             statement.execute(DROP_SPEECH_TABLE);
+            statement.execute(DROP_TF_TABLE);
             statement.execute(DROP_NUMBER_OF_SPEECHES_WITH_WORD_TABLE);
-            statement.execute(DROP_IDF_TABLE);
-            statement.execute(DROP_TOTAL_SPEECH_WORDS_TABLE);
+            //statement.execute(DROP_IDF_TABLE);
+            statement.execute(DROP_IDF_TF_TABLE);
 
             Functions.println("Dropped tables successfully.");
         } catch (SQLException e) {
@@ -130,7 +116,8 @@ public class DatabaseManager {
             statement.execute(CREATE_SITTING_TABLE);
             statement.execute(CREATE_MEMBER_TABLE);
             statement.execute(CREATE_SPEECH_TABLE);
-            statement.execute(CREATE_INVERTED_INDEX_TABLE);
+            statement.execute(CREATE_TF_TABLE);
+            statement.execute(CREATE_WORD_FREQUENCY_TABLE);
 
             Functions.println("Created tables successfully.");
         } catch (SQLException e) {
@@ -138,13 +125,11 @@ public class DatabaseManager {
         }
     }
 
-    public static void createTableIndexes() {
+    public static void createTFIndex() {
         try (Connection connection = connect();
              Statement statement = connection.createStatement()) {
-            Functions.println("Creating word index...");
-            statement.execute(CREATE_WORD_INDEX);
-            Functions.println("Creating speech index...");
-            statement.execute(CREATE_SPEECH_ID_INDEX);
+            Functions.println("Creating TF word index");
+            statement.execute(CREATE_TF_WORD_INDEX);
 
             Functions.println("Created table indexes successfully.");
         } catch (SQLException e) {
@@ -152,33 +137,21 @@ public class DatabaseManager {
         }
     }
 
-    public static void createIDF_TF_RelatedTables() {
+    public static void createIdfTfTable() {
         try (Connection connection = connect();
              Statement statement = connection.createStatement()) {
-            Functions.println("Creating TOTAL_SPEECH_WORDS...");
-            statement.execute(CREATE_TOTAL_SPEECH_WORDS_TABLE);
-            Functions.println("Creating NUMBER_OF_SPEECHES_WITH_WORD");
-            statement.execute(CREATE_NUMBER_OF_SPEECHES_WITH_WORD_TABLE);
-            Functions.println("Creating IDF");
-            statement.execute(CREATE_IDF_TABLE);
 
-            Functions.println("Created IDF-TF related tables successfully.");
+            Functions.println("Calculating IDF*TF tabl");
+            statement.execute(String.format(CREATE_IDF_TF_TABLE, SpeechRepository.TOTAL_SPEECHES));
 
-            createIDF_TF_RelatedIndexes(statement);
+            Functions.println("Creating IDF_TF word index.");
+            statement.execute(CREATE_IDF_TF_WORD_INDEX);
+
+            Functions.println("Creating IDF_TF speech_id index.");
+            statement.execute(CREATE_IDF_TF_SPEECH_ID_INDEX);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static void createIDF_TF_RelatedIndexes(Statement statement) {
-        try {
-            statement.execute(CREATE_TOTAL_SPEECH_WORDS_VIEW_SPEECH_ID_INDEX);
-            statement.execute(CREATE_NUMBER_OF_SPEECHES_WITH_WORD_WORD_INDEX);
-            statement.execute(CREATE_IDF_WORD_INDEX);
-
-            Functions.println("Created IDF-TF Related indexes successfully");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
 }

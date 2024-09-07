@@ -7,8 +7,8 @@ import java.util.Set;
 
 public class Period {
 
-    private String name;
-    private Set<Session> sessions;
+    private final String name;
+    private final Set<Session> sessions;
 
     public Period(String name) {
         this.name = name;

@@ -1,43 +1,63 @@
 package database;
 
+import entities.Entry;
 import entities.InvertedIndex;
+import entities.TF;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Map;
+import java.util.Collection;
 
-public class InvertedIndexRepository{
+public class InvertedIndexRepository {
 
-    private static final String INSERT_INTO_INVERTED_INDEX = "INSERT INTO INVERTED_INDEX (WORD, SPEECH_ID, COUNTER) VALUES (?, ?, ?) ON CONFLICT(WORD, SPEECH_ID) DO UPDATE SET COUNTER = COUNTER + excluded.COUNTER";
+    private static final String INSERT_INTO_TF = "INSERT INTO TF (TF, WORD, SPEECH_ID) VALUES (ROUND(?, 4), ?, ?);";
 
-    private static final String LOAD_MOST_COMMON_ENTRIES = "SELECT * FROM INVERTED_INDEX ORDERY BY COUNT DESC LIMIT 20000";
+    private static final String INSERT_INTO_WORD_FREQUENCY = "INSERT INTO WORD_FREQUENCY (WORD, FREQUENCY) " +
+            "VALUES (?, 1) " +
+            "ON CONFLICT(WORD) " +
+            "DO UPDATE SET FREQUENCY = FREQUENCY + 1;";
 
     public InvertedIndexRepository() {
         super();
     }
 
     public void save(InvertedIndex invertedIndex) {
-        Map<String, Map<Integer, Long>> index = invertedIndex.getIndex();
+        try (Connection connection = DatabaseManager.connect();
+                PreparedStatement insertIntoWordFrequency = connection.prepareStatement(INSERT_INTO_WORD_FREQUENCY);
+             PreparedStatement insertIntoTF = connection.prepareStatement(INSERT_INTO_TF)) {
 
-        try (Connection connection = DatabaseManager.connect(); PreparedStatement preparedStatement = connection.prepareStatement(INSERT_INTO_INVERTED_INDEX)) {
             connection.setAutoCommit(false);
 
-            for (Map.Entry<String, Map<Integer, Long>> entry : index.entrySet()) {
-                String word = entry.getKey();
-                for (Map.Entry<Integer, Long> subEntry : entry.getValue().entrySet()) {
-                    preparedStatement.setString(1, word);
-                    preparedStatement.setLong(2, subEntry.getKey());
-                    preparedStatement.setLong(3, subEntry.getValue());
-                    preparedStatement.addBatch();
+            Collection<TF> tfScores = invertedIndex.getTfScores();
+            for (TF tf : tfScores) {
+                int speechId = tf.getSpeechId();
+
+                Collection<Entry<String, Double>> scores = tf.getScore();
+
+                for (Entry<String, Double> entry : scores) {
+                    String word = entry.getKey();
+
+                    insertIntoWordFrequency.setString(1, word);
+                    insertIntoWordFrequency.addBatch();
+
+                    insertIntoTF.setDouble(1, entry.getValue());
+                    insertIntoTF.setString(2, word);
+                    insertIntoTF.setInt(3, speechId);
+
+                    insertIntoTF.addBatch();
                 }
+                scores.clear();
             }
 
-            preparedStatement.executeBatch();
+            insertIntoWordFrequency.executeBatch();
+            insertIntoTF.executeBatch();
+
             connection.commit();
+
             connection.setAutoCommit(true);
-            index.clear();
+            tfScores.clear();
+
         } catch (SQLException e) {
             e.printStackTrace();
         }

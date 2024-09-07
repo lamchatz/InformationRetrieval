@@ -3,9 +3,9 @@ package dto;
 public class InfoToShow {
     private final Period period;
     private final Member member;
-    private final Speech speech;
+    private final String speech;
 
-    public InfoToShow(Speech speech, Member member, Period period) {
+    public InfoToShow(String speech, Member member, Period period) {
         this.speech = speech;
         this.member = member;
         this.period = period;
@@ -19,7 +19,7 @@ public class InfoToShow {
         return member;
     }
 
-    public Speech getSpeech() {
+    public String getSpeech() {
         return speech;
     }
 

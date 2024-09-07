@@ -3,11 +3,8 @@ package entities;
 import java.util.Objects;
 
 public class Speech extends Entity {
-    private static final String SPACE = " ";
     private final String text;
-    private final int size;
-    //private final Sitting sitting;
-    //private final Member member;
+    private int size;
     private final int memberId;
     private final int sittingId;
 
@@ -15,13 +12,16 @@ public class Speech extends Entity {
         super();
         this.memberId = memberId;
         this.text = text;
-        this.size = text.split(SPACE).length;
         this.sittingId = sittingId;
     }
 
 
     public String getText() {
         return text;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
     }
 
     public int getSize() {

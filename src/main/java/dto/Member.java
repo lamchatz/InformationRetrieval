@@ -1,10 +1,10 @@
 package dto;
 
 public class Member {
-    private String name;
-    private String politicalParty;
-    private String region;
-    private String role;
+    private final String name;
+    private final String politicalParty;
+    private final String region;
+    private final String role;
 
     public Member(String name, String politicalParty, String region, String role) {
         this.name = name;

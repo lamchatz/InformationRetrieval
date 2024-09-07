@@ -18,10 +18,10 @@ public class MemberRepository{
     protected static final String INSERT_INTO_MEMBER = "INSERT INTO MEMBER (ID, NAME, POLITICAL_PARTY, REGION, ROLE, GENDER) " +
             "VALUES (?, ?, ?, ?, ?, ?)";
 
-    private Set<Member> batchMembers;
+    private final Set<Member> batchMembers;
 
     public MemberRepository() {
-        this.batchMembers = new HashSet<>();
+        this.batchMembers = new HashSet<>(Config.EXECUTE_BATCH_AFTER);
     }
 
     public void flushBatch() {
@@ -40,24 +40,18 @@ public class MemberRepository{
 
     public void executeBatch() {
         try (Connection connection = DatabaseManager.connect();
-             PreparedStatement preparedStatement = connection.prepareStatement(INSERT_INTO_MEMBER)) {
-
-            connection.setAutoCommit(false);
-
+                PreparedStatement insertIntoMember = connection.prepareStatement(INSERT_INTO_MEMBER)) {
             for (Member member : batchMembers) {
-                preparedStatement.setInt(1, member.getId());
-                preparedStatement.setString(2, member.getName());
-                preparedStatement.setString(3, member.getPoliticalParty());
-                preparedStatement.setString(4, member.getRegion());
-                preparedStatement.setString(5, member.getRole());
-                preparedStatement.setString(6, member.getGender());
-                preparedStatement.addBatch();
+                insertIntoMember.setInt(1, member.getId());
+                insertIntoMember.setString(2, member.getName());
+                insertIntoMember.setString(3, member.getPoliticalParty());
+                insertIntoMember.setString(4, member.getRegion());
+                insertIntoMember.setString(5, member.getRole());
+                insertIntoMember.setString(6, member.getGender());
+                insertIntoMember.addBatch();
             }
 
-            preparedStatement.executeBatch();
-            connection.commit();
-
-            connection.setAutoCommit(true);
+            insertIntoMember.executeBatch();
         } catch (SQLException e) {
             e.printStackTrace();
         }

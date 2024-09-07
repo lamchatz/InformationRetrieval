@@ -17,17 +17,14 @@ import java.util.Set;
 
 public class SpeechRepository {
 
-
-    private static final String CONTENT = "CONTENT";
+    public static long TOTAL_SPEECHES = 0;
     private static final String MEMBER_NAME = "MEMBER_NAME";
     private static final String POLITICAL_PARTY = "POLITICAL_PARTY";
     private static final String REGION = "REGION";
     private static final String ROLE = "ROLE";
-    private static final String GENDER = "GENDER";
     private static final String SITTING_NAME = "SITTING_NAME";
     private static final String SESSION_NAME = "SESSION_NAME";
     private static final String PERIOD_NAME = "PERIOD_NAME";
-    private static final String DATE = "DATE";
     private static final String SELECT_ALL_INFO_TO_SHOW = "SELECT CONTENT, " +
             "MEMBER.NAME AS MEMBER_NAME, POLITICAL_PARTY, REGION, " +
             "ROLE, GENDER, SITTING.NAME AS SITTING_NAME, DATE, " +
@@ -38,11 +35,12 @@ public class SpeechRepository {
             "JOIN SESSION ON (SITTING.SESSION_ID = SESSION.ID) " +
             "JOIN PERIOD ON (SESSION.PERIOD_NAME = PERIOD.NAME) " +
             "WHERE SPEECH.ID IN ";
-    protected static final String INSERT_INTO_SPEECH = "INSERT INTO SPEECH(ID, CONTENT, MEMBER_ID, SITTING_ID) VALUES (?, ?, ?, ?)";
-    private Collection<Speech> batchSpeeches;
+    protected static final String INSERT_INTO_SPEECH = "INSERT INTO SPEECH(ID, CONTENT, MEMBER_ID, SITTING_ID, TOTAL_WORDS) VALUES (?, ?, ?, ?, ?)";
+    private static final String CONTENT = "CONTENT";
+    private final Collection<Speech> batchSpeeches;
 
     public SpeechRepository() {
-        this.batchSpeeches = new ArrayList<>();
+        this.batchSpeeches = new ArrayList<>(Config.EXECUTE_BATCH_AFTER);
     }
 
     public void clear() {
@@ -64,41 +62,39 @@ public class SpeechRepository {
 
     public void executeBatch() {
         try (Connection connection = DatabaseManager.connect();
-             PreparedStatement preparedStatement = connection.prepareStatement(INSERT_INTO_SPEECH)) {
-
-            connection.setAutoCommit(false);
-
+             PreparedStatement insertIntoSpeech = connection.prepareStatement(INSERT_INTO_SPEECH)) {
             for (Speech speech : batchSpeeches) {
                 int sittingId = speech.getSittingId();
 
                 if (sittingId != -1) {
-                    preparedStatement.setInt(1, speech.getId());
-                    preparedStatement.setString(2, speech.getText());
-                    preparedStatement.setInt(3, speech.getMemberId());
-                    preparedStatement.setInt(4, sittingId);
+                    TOTAL_SPEECHES++;
 
-                    preparedStatement.addBatch();
+                    insertIntoSpeech.setInt(1, speech.getId());
+                    insertIntoSpeech.setString(2, speech.getText());
+                    insertIntoSpeech.setInt(3, speech.getMemberId());
+                    insertIntoSpeech.setInt(4, sittingId);
+                    insertIntoSpeech.setInt(5, speech.getSize());
+
+                    insertIntoSpeech.addBatch();
+                } else {
+                    Functions.println("No sitting was found for this speech!");
                 }
             }
 
-            preparedStatement.executeBatch();
-            connection.commit();
-
-            connection.setAutoCommit(true);
+            insertIntoSpeech.executeBatch();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     public Collection<InfoToShow> getAllInfoFor(Set<Integer> speechIds) {
-        Collection<InfoToShow> infoToShowCollection = new ArrayList<>();
+        Collection<InfoToShow> infoToShowCollection = new ArrayList<>(speechIds.size());
 
         if (!speechIds.isEmpty()) {
             try (Connection connection = DatabaseManager.connect();
                  ResultSet resultSet = connection.prepareStatement(SELECT_ALL_INFO_TO_SHOW + Functions.generateInClauseFor(speechIds)).executeQuery()) {
 
                 while (resultSet.next()) {
-                    dto.Speech speech = new dto.Speech(resultSet.getString("CONTENT"));
                     Member member = new Member(resultSet.getString(MEMBER_NAME),
                             resultSet.getString(POLITICAL_PARTY),
                             resultSet.getString(REGION),
@@ -109,7 +105,7 @@ public class SpeechRepository {
                             resultSet.getString(SITTING_NAME)
                     );
 
-                    infoToShowCollection.add(new InfoToShow(speech, member, period));
+                    infoToShowCollection.add(new InfoToShow(resultSet.getString(CONTENT), member, period));
                 }
             } catch (SQLException e) {
                 e.printStackTrace();

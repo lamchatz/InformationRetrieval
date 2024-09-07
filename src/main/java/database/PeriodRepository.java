@@ -11,11 +11,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class PeriodRepository {
-
-
     private static final String INSERT_INTO_PERIOD = "INSERT INTO PERIOD (NAME) VALUES (?) ON CONFLICT DO NOTHING";
     private static final String INSERT_INTO_SESSION = "INSERT INTO SESSION (ID, NAME, PERIOD_NAME) VALUES (?, ?, ?)";
     private static final String INSERT_INTO_SITTING = "INSERT INTO SITTING (ID, NAME, SESSION_ID, DATE) VALUES (?, ?, ?, ?)";
+
+    public PeriodRepository() {
+        super();
+    }
 
     public void save(Period period) {
         try (Connection connection = DatabaseManager.connect();

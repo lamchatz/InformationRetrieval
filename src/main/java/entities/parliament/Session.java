@@ -1,19 +1,19 @@
 package entities.parliament;
 
+import entities.Entity;
+
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-public class Session {
+public class Session extends Entity {
 
-    private static long count = 0;
-    private long id;
-    private String name;
-    private Set<Sitting> sittings;
+    private final String name;
+    private final Set<Sitting> sittings;
 
     public Session(String name, Sitting sitting) {
-        this.id = ++count;
+        super();
         this.name = name;
         this.sittings = new HashSet<>();
         this.sittings.add(sitting);
@@ -21,10 +21,6 @@ public class Session {
 
     public void addSitting(Sitting sitting) {
         this.sittings.add(sitting);
-    }
-
-    public long getId() {
-        return id;
     }
 
     public String getName() {

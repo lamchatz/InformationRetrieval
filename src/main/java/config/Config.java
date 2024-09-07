@@ -8,12 +8,12 @@ import java.util.Properties;
 
 public class Config {
     private static final String CONFIG_PROPERTIES = "src/config.properties";
-    public static String BIG;
-    public static String NORMAL;
-    public static String TEST;
-    public static String DB_URL;
-    public static boolean DROP_AND_RECREATE_TABLES;
-    public static int EXECUTE_BATCH_AFTER;
+    public final static String BIG;
+    public final static String NORMAL;
+    public final static String TEST;
+    public final static String DB_URL;
+    public final static boolean DROP_AND_RECREATE_TABLES;
+    public final static int EXECUTE_BATCH_AFTER;
 
     static {
         try (FileInputStream fileInputStream = new FileInputStream(CONFIG_PROPERTIES)) {
@@ -27,7 +27,7 @@ public class Config {
             TEST = properties.getProperty(Property.TEST_CSV_PATH.name());
             DB_URL = properties.getProperty(Property.DB_URL.name());
         } catch (IOException e) {
-            Functions.println(e);
+            throw new RuntimeException(e);
         }
     }
 }

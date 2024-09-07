@@ -3,7 +3,6 @@ package database;
 import utility.Functions;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -12,32 +11,20 @@ import java.util.Set;
 
 public class ViewRepository {
 
-    private static final String SELECT_IDF_VALUE_OF_WORD = "SELECT ROUND(IDF, 8) AS IDF FROM IDF WHERE WORD = ?";
+    private static final String SELECT_SPEECH_TOTAL_WORDS = "SELECT ID, TOTAL_WORDS FROM SPEECH WHERE ID IN ";
+    private static final String BASE_SELECT_IDF_TF_VALUES_OF_WORD = "SELECT SCORE, SPEECH_ID FROM IDF_TF ";
+    private static final String BASE_SELECT_IDF_TF_VALUES_OF_WORD_WITHOUT_ACCENT = "SELECT SCORE, WORD, SPEECH_ID FROM IDF_TF ";
 
-    private static final String SELECT_IDF_VALUE_OF_WORD_WITHOUT_ACCENT = "SELECT ROUND(IDF, 8) AS IDF, WORD FROM IDF WHERE WORD IN ";
-
-    private static final String BASE_SELECT_TF_VALUE_OF_WORD = "SELECT ROUND((COUNTER * 1.0) / TOTAL_WORDS, 4) AS TF, INVERTED_INDEX.SPEECH_ID " +
-            "FROM INVERTED_INDEX " +
-            "JOIN TOTAL_SPEECH_WORDS ON (INVERTED_INDEX.SPEECH_ID = TOTAL_SPEECH_WORDS.SPEECH_ID) ";
-
-    private static final String BASE_SELECT_TF_VALUE_OF_WORD_WITHOUT_ACCENT = "SELECT ROUND((COUNTER * 1.0) / TOTAL_WORDS, 4) AS TF, INVERTED_INDEX.SPEECH_ID, WORD " +
-            "FROM INVERTED_INDEX " +
-            "JOIN TOTAL_SPEECH_WORDS ON (INVERTED_INDEX.SPEECH_ID = TOTAL_SPEECH_WORDS.SPEECH_ID) ";
-    private static final String SELECT_SPEECH_TOTAL_WORDS = "SELECT * FROM TOTAL_SPEECH_WORDS WHERE " +
-            "SPEECH_ID IN ";
-    private static final String TF = "TF";
+    private static final String ID = "ID";
     private static final String SPEECH_ID = "SPEECH_ID";
     private static final String TOTAL_WORDS = "TOTAL_WORDS";
     private static final String WORD = "WORD";
-    private static final String IDF = "IDF";
     private static final String SINGLE_QUOTE = "'";
     private static final String SINGLE_QUOTE_PARENTHESIS = "') ";
     private static final String SPACE = " ";
     private static final String SINGLE_QUOTE_WITH_SPACE = "' ";
     private static final String PERCENTAGE_SINGLE_QUOTE_WITH_SPACE = "%' ";
-    private static final String WHERE_WORD_IN_ = "WHERE WORD IN ";
-    private static final String WHERE_WORD = "WHERE WORD = '";
-    private static final String JOIN_SPEECH_ON_TOTAL_SPEECH_WORDS = "JOIN SPEECH ON (TOTAL_SPEECH_WORDS.SPEECH_ID = SPEECH.ID) ";
+    private static final String JOIN_SPEECH_ON_TF = "JOIN SPEECH ON (TF.SPEECH_ID = SPEECH.ID) ";
     private static final String JOIN_MEMBER_ON_SPEECH = "JOIN MEMBER ON (SPEECH.MEMBER_ID = MEMBER.ID) ";
     private static final String JOIN_SITTING_ON_SPEECH = "JOIN SITTING ON (SPEECH.SITTING_ID = SITTING.ID) ";
     private static final String JOIN_SESSION_ON_SITTING = "JOIN SESSION ON (SITTING.SESSION_ID = SESSION.ID) ";
@@ -46,56 +33,21 @@ public class ViewRepository {
     private static final String AND_SITTING_DATE_GREATER_THAN = "AND DATE >= '";
     private static final String AND_SESSION_NAME = "AND (SESSION.NAME = '";
     private static final String OR_SESSION_PERIOD_NAME = "' OR SESSION.PERIOD_NAME = '";
+    private static final String WHERE_WORD = "WHERE WORD = '";
+    private static final String WHERE_WORD_IN_ = "WHERE WORD IN ";
+    private static final String SCORE = "SCORE";
 
     public ViewRepository() {
         super();
     }
 
-    public double getIdfValueOfWord(String word) {
-        double idf = 0.0;
-
-        try (Connection connection = DatabaseManager.connect();
-             PreparedStatement preparedStatement = connection.prepareStatement(SELECT_IDF_VALUE_OF_WORD)) {
-
-            preparedStatement.setString(1, word);
-
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    idf = resultSet.getDouble(IDF);
-                }
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return Math.log(1 + idf);
-    }
-
-    public Map<String, Double> getPossibleIdfValuesOfWordWithoutAccent(String word) {
-        Map<String, Double> possibleIdfValuesOfWord = new HashMap<>();
-
-        try (Connection connection = DatabaseManager.connect();
-             ResultSet resultSet = connection.prepareStatement(SELECT_IDF_VALUE_OF_WORD_WITHOUT_ACCENT
-                             + Functions.generateInClauseFor(Functions.generateAccentVariants(word)))
-                     .executeQuery()) {
-            while (resultSet.next()) {
-                possibleIdfValuesOfWord.put(resultSet.getString(WORD), Math.log(1 + resultSet.getDouble(IDF)));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return possibleIdfValuesOfWord;
-    }
-
     public Map<Integer, Integer> getSpeechTotalWords(Set<Integer> speechIds) {
-        Map<Integer, Integer> speechTotalWords = new HashMap<>();
+        Map<Integer, Integer> speechTotalWords = new HashMap<>(speechIds.size());
 
         try (Connection connection = DatabaseManager.connect();
              ResultSet resultSet = connection.prepareStatement(SELECT_SPEECH_TOTAL_WORDS + Functions.generateInClauseFor(speechIds)).executeQuery()) {
             while (resultSet.next()) {
-                speechTotalWords.put(resultSet.getInt(SPEECH_ID), resultSet.getInt(TOTAL_WORDS));
+                speechTotalWords.put(resultSet.getInt(ID), resultSet.getInt(TOTAL_WORDS));
             }
 
         } catch (SQLException e) {
@@ -105,70 +57,70 @@ public class ViewRepository {
         return speechTotalWords;
     }
 
-    public Map<Integer, Double> selectTFValueOfWord(String searchWord, String... args) {
-        Map<Integer, Double> tfOfSpeeches = new HashMap<>();
+    public Map<Integer, Double> selectIdfTFValuesOfWord(String searchWord, String... args) {
+        Map<Integer, Double> tfOfSpeeches = new HashMap<>(30000);
 
         StringBuilder whereClause = new StringBuilder(WHERE_WORD).append(searchWord).append(SINGLE_QUOTE_WITH_SPACE);
 
-        String s = BASE_SELECT_TF_VALUE_OF_WORD + createTFValueOfWordQueryFor(whereClause, args);
+        String s = BASE_SELECT_IDF_TF_VALUES_OF_WORD + createIdfTfValueOfWordQueryFor(whereClause, args);
 
+        Functions.println(s);
         try (Connection connection = DatabaseManager.connect();
              ResultSet resultSet = connection.prepareStatement(s).executeQuery()) {
             while (resultSet.next()) {
-                double tf = resultSet.getDouble(TF);
-                int speechId = resultSet.getInt(SPEECH_ID);
-                tfOfSpeeches.put(speechId, tf);
+                tfOfSpeeches.put(resultSet.getInt(SPEECH_ID), resultSet.getDouble(SCORE));
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
+        Functions.println(tfOfSpeeches);
+
         return tfOfSpeeches;
     }
 
-    public Map<String, Map<Integer, Double>> selectTFValueOfWordWithoutAccent(String searchWord, String... args) {
-        Map<String, Map<Integer, Double>> tfOfSpeechesForWord = new HashMap<>();
+
+    public Map<String, Map<Integer, Double>> selectIdfTfValuesForWordWithoutAccent(String searchWord, String... args) {
+        Map<String, Map<Integer, Double>> idfTfOfSpeechesForWord = new HashMap<>();
 
         StringBuilder whereClause = new StringBuilder(WHERE_WORD_IN_).append(Functions.generateInClauseFor(Functions.generateAccentVariants(searchWord))).append(SPACE);
-        String s = BASE_SELECT_TF_VALUE_OF_WORD_WITHOUT_ACCENT + createTFValueOfWordQueryFor(whereClause, args);
+        String s = BASE_SELECT_IDF_TF_VALUES_OF_WORD_WITHOUT_ACCENT + createIdfTfValueOfWordQueryFor(whereClause, args);
 
         Functions.println(s);
 
         try (Connection connection = DatabaseManager.connect();
              ResultSet resultSet = connection.prepareStatement(s).executeQuery()) {
             while (resultSet.next()) {
-                double tf = resultSet.getDouble(TF);
+                double idfTf = resultSet.getDouble(SCORE);
                 int speechId = resultSet.getInt(SPEECH_ID);
                 String word = resultSet.getString(WORD);
 
-                if (!tfOfSpeechesForWord.containsKey(word)) {
-                    tfOfSpeechesForWord.put(word, new HashMap<>());
+                if (!idfTfOfSpeechesForWord.containsKey(word)) {
+                    idfTfOfSpeechesForWord.put(word, new HashMap<>());
                 }
 
-                Map<Integer, Double> tfOfSpeeches = tfOfSpeechesForWord.get(word);
-                tfOfSpeeches.put(speechId, tf);
+                Map<Integer, Double> idfTfOfSpeech = idfTfOfSpeechesForWord.get(word);
+                idfTfOfSpeech.put(speechId, idfTf);
 
-                tfOfSpeechesForWord.put(word, tfOfSpeeches);
+                idfTfOfSpeechesForWord.put(word, idfTfOfSpeech);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        return tfOfSpeechesForWord;
+        return idfTfOfSpeechesForWord;
     }
-
-    public String createTFValueOfWordQueryFor(StringBuilder whereClause, String... args) {
+    public String createIdfTfValueOfWordQueryFor(StringBuilder whereClause, String... args) {
         StringBuilder joins = new StringBuilder();
-        boolean joinedSpeech = false;
         boolean joinedSitting = false;
 
         if (args.length > 1) {
+            joins.append(JOIN_SPEECH_ON_TF);
+
             String memberName = args[1];
             if (Functions.isNotEmpty(memberName)) {
-                joins.append(JOIN_SPEECH_ON_TOTAL_SPEECH_WORDS);
                 joins.append(JOIN_MEMBER_ON_SPEECH);
 
-                joinedSpeech = true;
                 whereClause.append(AND_MEMBER_NAME_LIKE).append(memberName).append(PERCENTAGE_SINGLE_QUOTE_WITH_SPACE);
             }
         }
@@ -176,10 +128,6 @@ public class ViewRepository {
         if (args.length > 2) {
             String from = args[2];
             if (Functions.isNotEmpty(from)) {
-                if (!joinedSpeech) {
-                    joins.append(JOIN_SPEECH_ON_TOTAL_SPEECH_WORDS);
-                    joinedSpeech = true;
-                }
                 joins.append(JOIN_SITTING_ON_SPEECH);
                 joinedSitting = true;
 
@@ -190,10 +138,6 @@ public class ViewRepository {
         if (args.length > 3) {
             String to = args[3];
             if (Functions.isNotEmpty(to)) {
-                if (!joinedSpeech) {
-                    joins.append(JOIN_SPEECH_ON_TOTAL_SPEECH_WORDS);
-                    joinedSpeech = true;
-                }
                 if (!joinedSitting) {
                     joins.append(JOIN_SITTING_ON_SPEECH);
                     joinedSitting = true;
@@ -206,9 +150,6 @@ public class ViewRepository {
         if (args.length > 4) {
             String periodOrSession = args[4];
             if (Functions.isNotEmpty(periodOrSession)) {
-                if (!joinedSpeech ) {
-                    joins.append(JOIN_SPEECH_ON_TOTAL_SPEECH_WORDS);
-                }
                 if (!joinedSitting) {
                     joins.append(JOIN_SITTING_ON_SPEECH);
                 }

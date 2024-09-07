@@ -7,17 +7,13 @@ import java.util.Set;
 
 public class Processor {
     private Period lastPeriod;
-    private Set<String> periodNames;
-    private Set<String> sessionNames;
-    private Set<String> sittingNames;
-    private PeriodRepository periodRepository;
+    private final Set<String> periodNames;
+    private final PeriodRepository periodRepository;
 
     public Processor() {
         this.lastPeriod = new Period("");
         this.periodNames = new HashSet<>(1);
         this.periodNames.add("");
-        this.sessionNames = new HashSet<>();
-        this.sittingNames = new HashSet<>();
 
         this.periodRepository = new PeriodRepository();
     }

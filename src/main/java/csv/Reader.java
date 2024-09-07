@@ -41,14 +41,14 @@ public class Reader {
     private static final String ANONYMOUS = "Anonymous";
 
     public static void read() {
-        InvertedIndex invertedIndex = new InvertedIndex();
-        Set<Government> governments = new HashSet<>();
-        Map<String, Integer> members = new HashMap<>();
-        Processor parliamentProcessor = new Processor();
+        final InvertedIndex invertedIndex = new InvertedIndex();
+        final Set<Government> governments = new HashSet<>();
+        final Map<String, Integer> members = new HashMap<>();
+        final Processor parliamentProcessor = new Processor();
 
-        InvertedIndexRepository invertedIndexRepository = new InvertedIndexRepository();
-        MemberRepository memberRepository = new MemberRepository();
-        SpeechRepository speechRepository = new SpeechRepository();
+        final InvertedIndexRepository invertedIndexRepository = new InvertedIndexRepository();
+        final MemberRepository memberRepository = new MemberRepository();
+        final SpeechRepository speechRepository = new SpeechRepository();
 
         try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.NORMAL))) {
             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader(HEADER).withFirstRecordAsHeader());
@@ -77,8 +77,8 @@ public class Reader {
                     members.put(name, member.getId());
                 }
 
-                String sessionName = csvRecord.get(PARLIAMENTARY_SESSION);
-                String sittingName = csvRecord.get(PARLIAMENTARY_SITTING);
+                final String sessionName = csvRecord.get(PARLIAMENTARY_SESSION);
+                final String sittingName = csvRecord.get(PARLIAMENTARY_SITTING);
 
                 parliamentProcessor.process(csvRecord.get(PARLIAMENTARY_PERIOD),
                         sessionName,
@@ -87,7 +87,7 @@ public class Reader {
 
                 //governments.add(Government.processGovernment(csvRecord.get(GOVERNMENT)));
 
-                Speech speech = new Speech(members.get(name),
+                final Speech speech = new Speech(members.get(name),
                         csvRecord.get(SPEECH),
                         parliamentProcessor.getSittingId(sessionName, sittingName)
                 );

@@ -7,14 +7,10 @@ import java.util.Objects;
 public class Sitting extends Entity {
 
     private final String name;
-    private String date;
-
-    public Sitting(String name) {
-        super();
-        this.name = name;
-    }
+    private final String date;
 
     public Sitting(String name, String date) {
+        super();
         this.name = name;
         this.date = date;
     }

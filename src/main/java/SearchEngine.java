@@ -31,7 +31,7 @@ public class SearchEngine {
 
         if (args.length > 0) {
             String question = args[0];
-            Map<Integer, Double> accumulators = new HashMap<>();
+            Map<Integer, Double> accumulators = new HashMap<>(300_000);
 
             for (String searchWord : question.toLowerCase().split("\\s")) {
                 if (Functions.hasAccent(searchWord)) {
@@ -45,7 +45,7 @@ public class SearchEngine {
 
             getTopSpeeches(accumulators);
 
-            printAccordingToUserInput(speechRepository.getAllInfoFor(accumulators.keySet()));
+            //printAccordingToUserInput(speechRepository.getAllInfoFor(accumulators.keySet()));
         }
     }
 
@@ -70,35 +70,18 @@ public class SearchEngine {
         }
     }
 
-
     private void searchForAccentWord(Map<Integer, Double> accumulators, String searchWord, String... args) {
-        double idf = viewRepository.getIdfValueOfWord(searchWord);
-        Map<Integer, Double> tfOfSpeeches = viewRepository.selectTFValueOfWord(searchWord, args);
+        Map<Integer, Double> idfTFValuesOfWord = viewRepository.selectIdfTFValuesOfWord(searchWord, args);
 
-        tfOfSpeeches.forEach((speechId, tfValue) ->
-                accumulators.merge(speechId, tfValue * idf, Double::sum));
+        idfTFValuesOfWord.forEach((speechId, idfTf) ->
+                accumulators.merge(speechId, idfTf, Double::sum));
     }
 
     private void searchForWordWithoutAccent(Map<Integer, Double> searchAccumulators, String searchWord, String... args) {
-        Map<String, Map<Integer, Double>> accumulatorsForWord = new HashMap<>();
-        Map<String, Double> possibleIdfValues = viewRepository.getPossibleIdfValuesOfWordWithoutAccent(searchWord);
-        Map<String, Map<Integer, Double>> tfOfSpeechesForWord = viewRepository.selectTFValueOfWordWithoutAccent(searchWord, args);
+        Map<String, Map<Integer, Double>> idfTfOfSpeechesForWords = viewRepository.selectIdfTfValuesForWordWithoutAccent(searchWord, args);
 
-        if (!tfOfSpeechesForWord.isEmpty()) {
-            for (String word : possibleIdfValues.keySet()) {
-                Double idf = possibleIdfValues.get(word);
-
-                Map<Integer, Double> speechAccumulators = new HashMap<>();
-
-                Map<Integer, Double> tfOfSpeeches = tfOfSpeechesForWord.get(word);
-
-                tfOfSpeeches.forEach((speechId, tfValue) ->
-                        speechAccumulators.merge(speechId, tfValue * idf, Double::sum));
-
-                accumulatorsForWord.putIfAbsent(word, speechAccumulators);
-            }
-
-            Map<Integer, Double> highestScores = accumulatorsForWord.values().stream()
+        if (!idfTfOfSpeechesForWords.isEmpty()) {
+            Map<Integer, Double> highestScores = idfTfOfSpeechesForWords.values().stream()
                     .flatMap(wordScores -> wordScores.entrySet().stream())
                     .collect(Collectors.toMap(
                             Map.Entry::getKey,
