@@ -54,7 +54,7 @@ public class Reader {
         final PoliticalPartyRepository politicalPartyRepository = new PoliticalPartyRepository();
         final SpeechRepository speechRepository = new SpeechRepository();
 
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.NORMAL))) {
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.BIG))) {
             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader(HEADER).withFirstRecordAsHeader());
 
             long counter = 0;

@@ -22,8 +22,9 @@ public class Main {
 
         if (Config.EXTRACT_KEY_WORDS) {
             Extractor extractor = new Extractor();
-
+            extractor.extractMemberKeyWords();
             extractor.extractKeyWordsForPoliticalParties();
+            extractor.extractKeyWordsForSpeeches();
         }
     }
 }

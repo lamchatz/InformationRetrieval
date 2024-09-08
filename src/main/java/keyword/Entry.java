@@ -5,8 +5,11 @@ import java.util.Objects;
 public class Entry {
     private final String date;
     private final String name;
-    private final String keyWord;
-    private final double score;
+    private String keyWord;
+    private double score;
+    private int speechId;
+    private String content;
+    private String keyWordScores;
 
     public Entry(String date, String name, String keyWord, double score) {
         this.date = date;
@@ -14,6 +17,21 @@ public class Entry {
         this.keyWord = keyWord;
         this.score = score;
     }
+
+    public Entry (String date, String name, String keyWord, double score, int speechId, String content) {
+        this(date, name, keyWord, score);
+        this.speechId = speechId;
+        this.content = content;
+    }
+
+    public Entry (String date, String name, String keyWordScores, int speechId, String content) {
+        this.date = date;
+        this.name = name;
+        this.keyWordScores = keyWordScores;
+        this.speechId = speechId;
+        this.content = content;
+    }
+
 
     public String getDate() {
         return date;
@@ -29,6 +47,18 @@ public class Entry {
 
     public double getScore() {
         return score;
+    }
+
+    public int getSpeechId() {
+        return speechId;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public String getKeyWordScores() {
+        return keyWordScores;
     }
 
     @Override

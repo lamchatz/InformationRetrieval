@@ -1,5 +1,6 @@
 package database;
 
+import config.Config;
 import keyword.Entry;
 import utility.Functions;
 
@@ -42,10 +43,66 @@ public class KeyWordRepository {
                 "GROUP BY MEMBER.NAME, IDF_TF.WORD" +
             ") " +
             "GROUP BY MEMBER_NAME";
+
+    private static final String SELECT_MEMBER_K_KEYWORDS = "SELECT " +
+            "MEMBER_NAME," +
+            "KEYWORD," +
+            "SCORE " +
+            "FROM " +
+            "( " +
+                "SELECT " +
+                    "MEMBER.NAME AS MEMBER_NAME," +
+                    "IDF_TF.WORD AS KEYWORD," +
+                    "SUM(IDF_TF.SCORE) AS SCORE," +
+                    "ROW_NUMBER() OVER (PARTITION BY MEMBER.NAME ORDER BY SUM(IDF_TF.SCORE) DESC) AS RN " +
+                "FROM IDF_TF " +
+                    "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
+                    "JOIN MEMBER ON SPEECH.MEMBER_ID = MEMBER.ID " +
+                    "JOIN SITTING ON SPEECH.SITTING_ID = SITTING.ID " +
+                "WHERE SITTING.DATE LIKE '%%%s' " +
+                "GROUP BY MEMBER.NAME, IDF_TF.WORD " +
+            ")" +
+            "WHERE RN <= %d " +
+            "ORDER BY MEMBER_NAME, SCORE DESC;";
+
+    private static final String SELECT_SPEECH_K_KEYWORDS =
+            "SELECT " +
+                "SPEECH_ID," +
+                "GROUP_CONCAT(KEYWORD || ':' || SCORE, ', ') AS KEYWORDS_SCORES," +
+                "MEMBER_NAME," +
+                "CONTENT " +
+            "FROM " +
+            "(" +
+                "SELECT " +
+                    "IDF_TF.WORD AS KEYWORD," +
+                    "IDF_TF.SCORE AS SCORE," +
+                    "IDF_TF.SPEECH_ID," +
+                    "MEMBER.NAME AS MEMBER_NAME," +
+                    "SPEECH.CONTENT AS CONTENT," +
+                    "ROW_NUMBER() OVER (PARTITION BY IDF_TF.SPEECH_ID ORDER BY IDF_TF.SCORE DESC) AS RN " +
+                "FROM IDF_TF " +
+                    "JOIN SPEECH ON SPEECH.ID = IDF_TF.SPEECH_ID " +
+                    "JOIN MEMBER ON MEMBER.ID = SPEECH.MEMBER_ID " +
+                    "JOIN SITTING ON SITTING.ID = SPEECH.SITTING_ID " +
+                "WHERE SITTING.DATE LIKE '%%%s' " +
+            ") " +
+            "WHERE RN <= %d " +
+            "GROUP BY SPEECH_ID, MEMBER_NAME, CONTENT " +
+            "ORDER BY SPEECH_ID;";
+
+    private static final String SELECT_SPEECH_KEYWORD = "SELECT SPEECH_ID, WORD AS KEYWORD, MAX(SCORE) AS SCORE, MEMBER.NAME AS MEMBER_NAME, SPEECH.CONTENT AS CONTENT " +
+            "FROM IDF_TF " +
+            "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
+            "JOIN MEMBER ON SPEECH.MEMBER_ID = MEMBER.ID " +
+            "JOIN SITTING ON SPEECH.SITTING_ID = SITTING.ID " +
+            "WHERE SITTING.DATE LIKE '%%%S' " +
+            "GROUP BY SPEECH_ID " +
+            "ORDER BY SPEECH_ID";
     private static final String KEYWORD = "KEYWORD";
     private static final String SCORE = "SCORE";
     private static final String MEMBER_NAME = "MEMBER_NAME";
     private static final String DATE = "DATE";
+    private static final int NUMBER_OF_KEYWORDS = Config.NUMBER_OF_KEY_WORDS;
 
     public KeyWordRepository() {
         super();
@@ -66,9 +123,13 @@ public class KeyWordRepository {
         return dates;
     }
 
-    public Collection<Entry> getMembersKeyWordForEachYear(String date) {
-        Collection<Entry> results = new ArrayList<>();
+    public Collection<Entry> getMembersKeyWordsForEachYear(String date) {
+        Collection<Entry> results = new ArrayList<>(1524);
+
         String query = String.format(SELECT_MEMBER_KEYWORD, date);
+        if (NUMBER_OF_KEYWORDS > 1 ) {
+            query = String.format(SELECT_MEMBER_K_KEYWORDS, date, NUMBER_OF_KEYWORDS);
+        }
 
         try (Connection connection = DatabaseManager.connect();
              ResultSet resultSet = connection.prepareStatement(query).executeQuery()) {
@@ -84,7 +145,6 @@ public class KeyWordRepository {
 
         return results;
     }
-
 
     public Collection<Entry> getKeyWordForPoliticalParties(String date) {
         Collection<Entry> results = new ArrayList<>();
@@ -104,6 +164,56 @@ public class KeyWordRepository {
         }
 
         Functions.println(results);
+        return results;
+    }
+
+    public Collection<Entry> getKeyWordForSpeech(String date) {
+        if (NUMBER_OF_KEYWORDS > 1) {
+            return getSpeechesTopKKeyWordsForEachYEar(date);
+        }
+        return getSpeechesSingleKeyWordForEachYear(date);
+    }
+
+    private Collection<Entry> getSpeechesSingleKeyWordForEachYear(String date) {
+        Collection<Entry> results = new ArrayList<>(5000);
+
+        String query = String.format(SELECT_SPEECH_KEYWORD, date);
+
+        try (Connection connection = DatabaseManager.connect();
+             ResultSet resultSet = connection.prepareStatement(query).executeQuery()) {
+            while(resultSet.next()) {
+                results.add(new Entry(date, resultSet.getString(MEMBER_NAME),
+                        resultSet.getString(KEYWORD),
+                        resultSet.getDouble(SCORE),
+                        resultSet.getInt("SPEECH_ID"),
+                        resultSet.getString("CONTENT"))
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return results;
+    }
+
+    private Collection<Entry> getSpeechesTopKKeyWordsForEachYEar(String date) {
+        Collection<Entry> results = new ArrayList<>(5000);
+
+        String query = String.format(SELECT_SPEECH_K_KEYWORDS, date, NUMBER_OF_KEYWORDS);
+
+        try (Connection connection = DatabaseManager.connect();
+             ResultSet resultSet = connection.prepareStatement(query).executeQuery()) {
+            while(resultSet.next()) {
+                results.add(new Entry(date, resultSet.getString(MEMBER_NAME),
+                        resultSet.getString("KEYWORDS_SCORES"),
+                        resultSet.getInt("SPEECH_ID"),
+                        resultSet.getString("CONTENT"))
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
         return results;
     }
 
