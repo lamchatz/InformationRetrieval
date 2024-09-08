@@ -61,8 +61,11 @@ public class SpeechRepository {
     }
 
     public void executeBatch() {
+        Functions.println("Saving speeches...");
         try (Connection connection = DatabaseManager.connect();
              PreparedStatement insertIntoSpeech = connection.prepareStatement(INSERT_INTO_SPEECH)) {
+            connection.createStatement().execute("PRAGMA SYNCHRONOUS = OFF;");
+            connection.setAutoCommit(false);
             for (Speech speech : batchSpeeches) {
                 int sittingId = speech.getSittingId();
 
@@ -82,6 +85,7 @@ public class SpeechRepository {
             }
 
             insertIntoSpeech.executeBatch();
+            connection.commit();
         } catch (SQLException e) {
             e.printStackTrace();
         }

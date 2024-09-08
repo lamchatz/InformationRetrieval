@@ -1,21 +1,19 @@
 package entities;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Objects;
 
 public class Member extends Entity {
 
     private final String name;
-    private final String politicalParty;
+    private final int politicalPartyId;
     private final String region;
     private final String role;
     private final String gender;
 
-    private Member(String name, String politicalParty, String region, String role, String gender) {
+    private Member(String name, int politicalPartyId, String region, String role, String gender) {
         super();
         this.name = name;
-        this.politicalParty = politicalParty;
+        this.politicalPartyId = politicalPartyId;
         this.region = region;
         this.role = role;
         this.gender = gender;
@@ -29,8 +27,8 @@ public class Member extends Entity {
         return name;
     }
 
-    public String getPoliticalParty() {
-        return politicalParty;
+    public int getPoliticalPartyId() {
+        return politicalPartyId;
     }
 
     public String getRegion() {
@@ -49,7 +47,7 @@ public class Member extends Entity {
     public String toString() {
         final StringBuilder sb = new StringBuilder("Member{");
         sb.append("name='").append(name).append('\'');
-        sb.append(", politicalParty='").append(politicalParty).append('\'');
+        sb.append(", politicalParty='").append(politicalPartyId).append('\'');
         sb.append(", region='").append(region).append('\'');
         sb.append(", role='").append(role).append('\'');
         sb.append(", gender=").append(gender);
@@ -72,7 +70,7 @@ public class Member extends Entity {
 
     public static class Builder {
         private String name;
-        private String politicalParty;
+        private int politicalPartyId;
         private String region;
         private String role;
         private String gender;
@@ -86,8 +84,8 @@ public class Member extends Entity {
             return this;
         }
 
-        public Builder politicalParty(String politicalParty) {
-            this.politicalParty = politicalParty;
+        public Builder politicalPartyId(int politicalParty) {
+            this.politicalPartyId = politicalParty;
             return this;
         }
 
@@ -107,7 +105,7 @@ public class Member extends Entity {
         }
 
         public Member create() {
-            return new Member(name, politicalParty, region, role, gender);
+            return new Member(name, politicalPartyId, region, role, gender);
         }
     }
 }

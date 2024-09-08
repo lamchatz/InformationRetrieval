@@ -3,10 +3,12 @@ package csv;
 import config.Config;
 import database.InvertedIndexRepository;
 import database.MemberRepository;
+import database.PoliticalPartyRepository;
 import database.SpeechRepository;
 import entities.Government;
 import entities.InvertedIndex;
 import entities.Member;
+import entities.PoliticalParty;
 import entities.Speech;
 import entities.parliament.Processor;
 import org.apache.commons.csv.CSVFormat;
@@ -43,11 +45,13 @@ public class Reader {
     public static void read() {
         final InvertedIndex invertedIndex = new InvertedIndex();
         final Set<Government> governments = new HashSet<>();
-        final Map<String, Integer> members = new HashMap<>();
+        final Map<String, Integer> politicalParties = new HashMap<>();
+        final Map<String, Integer> members = new HashMap<>(1524);
         final Processor parliamentProcessor = new Processor();
 
         final InvertedIndexRepository invertedIndexRepository = new InvertedIndexRepository();
         final MemberRepository memberRepository = new MemberRepository();
+        final PoliticalPartyRepository politicalPartyRepository = new PoliticalPartyRepository();
         final SpeechRepository speechRepository = new SpeechRepository();
 
         try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.NORMAL))) {
@@ -65,9 +69,17 @@ public class Reader {
 
                 counter++;
 
+                String politicalPartyName = csvRecord.get(POLITICAL_PARTY);
+                if (!politicalParties.containsKey(politicalPartyName)) {
+                    PoliticalParty politicalParty = new PoliticalParty(politicalPartyName);
+
+                    politicalPartyRepository.addToBatch(politicalParty);
+                    politicalParties.put(politicalPartyName, politicalParty.getId());
+                }
+
                 if (!members.containsKey(name)) {
                     Member member = Member.with().name(name)
-                            .politicalParty(csvRecord.get(POLITICAL_PARTY))
+                            .politicalPartyId(politicalParties.get(politicalPartyName))
                             .region(csvRecord.get(MEMBER_REGION))
                             .role(csvRecord.get(ROLES))
                             .gender(csvRecord.get(MEMBER_GENDER))
@@ -95,6 +107,7 @@ public class Reader {
                 invertedIndex.indexSpeech(speech);
                 speechRepository.addToBatch(speech);
 
+                //Functions.println(id);
                 if (counter == EXECUTE_BATCH_AFTER) {
                     Functions.println(id);
                     counter = 0;
@@ -104,12 +117,18 @@ public class Reader {
 
             Functions.println("Flushing parliament records...");
             parliamentProcessor.flush();
+
             Functions.println("Flushing speech records...");
             speechRepository.flushBatch();
-            Functions.println("Saving invertedIndex...");
-            invertedIndexRepository.save(invertedIndex);
+
+            Functions.println("Flushing politicalParty records...");
+            politicalPartyRepository.flushBatch();
+
             Functions.println("Flushing member records...");
             memberRepository.flushBatch();
+
+            Functions.println("Saving invertedIndex...");
+            invertedIndexRepository.save(invertedIndex);
 
         } catch (IOException e) {
             e.printStackTrace();

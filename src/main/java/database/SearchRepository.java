@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class ViewRepository {
+public class SearchRepository {
 
     private static final String SELECT_SPEECH_TOTAL_WORDS = "SELECT ID, TOTAL_WORDS FROM SPEECH WHERE ID IN ";
     private static final String BASE_SELECT_IDF_TF_VALUES_OF_WORD = "SELECT SCORE, SPEECH_ID FROM IDF_TF ";
@@ -37,7 +37,7 @@ public class ViewRepository {
     private static final String WHERE_WORD_IN_ = "WHERE WORD IN ";
     private static final String SCORE = "SCORE";
 
-    public ViewRepository() {
+    public SearchRepository() {
         super();
     }
 

@@ -1,5 +1,5 @@
+import database.SearchRepository;
 import database.SpeechRepository;
-import database.ViewRepository;
 import dto.InfoToShow;
 import utility.Functions;
 
@@ -15,11 +15,11 @@ public class SearchEngine {
 
     private static final int MAX_SIZE = 5;
 
-    private final ViewRepository viewRepository;
+    private final SearchRepository searchRepository;
     private final SpeechRepository speechRepository;
 
     public SearchEngine() {
-        this.viewRepository = new ViewRepository();
+        this.searchRepository = new SearchRepository();
         this.speechRepository = new SpeechRepository();
         speechRepository.clear();
     }
@@ -71,14 +71,14 @@ public class SearchEngine {
     }
 
     private void searchForAccentWord(Map<Integer, Double> accumulators, String searchWord, String... args) {
-        Map<Integer, Double> idfTFValuesOfWord = viewRepository.selectIdfTFValuesOfWord(searchWord, args);
+        Map<Integer, Double> idfTFValuesOfWord = searchRepository.selectIdfTFValuesOfWord(searchWord, args);
 
         idfTFValuesOfWord.forEach((speechId, idfTf) ->
                 accumulators.merge(speechId, idfTf, Double::sum));
     }
 
     private void searchForWordWithoutAccent(Map<Integer, Double> searchAccumulators, String searchWord, String... args) {
-        Map<String, Map<Integer, Double>> idfTfOfSpeechesForWords = viewRepository.selectIdfTfValuesForWordWithoutAccent(searchWord, args);
+        Map<String, Map<Integer, Double>> idfTfOfSpeechesForWords = searchRepository.selectIdfTfValuesForWordWithoutAccent(searchWord, args);
 
         if (!idfTfOfSpeechesForWords.isEmpty()) {
             Map<Integer, Double> highestScores = idfTfOfSpeechesForWords.values().stream()
@@ -93,7 +93,7 @@ public class SearchEngine {
     }
 
     private void normalizeValues(Map<Integer, Double> accumulators) {
-        Map<Integer, Integer> speechTotalWords = viewRepository.getSpeechTotalWords(accumulators.keySet());
+        Map<Integer, Integer> speechTotalWords = searchRepository.getSpeechTotalWords(accumulators.keySet());
 
         accumulators.replaceAll((speechId, score) -> {
             double length = speechTotalWords.getOrDefault(speechId, 1); // Avoid division by zero

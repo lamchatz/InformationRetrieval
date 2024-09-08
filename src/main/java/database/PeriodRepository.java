@@ -1,13 +1,11 @@
 package database;
 
 import entities.parliament.Period;
-import entities.parliament.Processor;
 import entities.parliament.Session;
 import entities.parliament.Sitting;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class PeriodRepository {
@@ -49,7 +47,6 @@ public class PeriodRepository {
 
             connection.commit();
 
-            connection.setAutoCommit(true);
         } catch (SQLException e) {
             e.printStackTrace();
         }

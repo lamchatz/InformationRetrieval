@@ -20,11 +20,15 @@ public class DatabaseManager {
     private static final String CREATE_MEMBER_TABLE = "CREATE TABLE IF NOT EXISTS MEMBER (" +
             "ID INTEGER, " +
             "NAME TEXT, " +
-            "POLITICAL_PARTY TEXT," +
+            "POLITICAL_PARTY_ID INTEGER," +
             "REGION TEXT," +
             "ROLE TEXT," +
             "GENDER TEXT," +
-            "PRIMARY KEY (ID))";
+            "PRIMARY KEY (ID)," +
+            "FOREIGN KEY(POLITICAL_PARTY_ID) REFERENCES POLITICAL_PARTY(ID))";
+
+    private static final String CREATE_POLITICAL_PARTY_TABLE = "CREATE TABLE IF NOT EXISTS POLITICAL_PARTY " +
+            "(ID INTEGER, NAME TEXT, PRIMARY KEY(ID))";
     private static final String CREATE_PERIOD_TABLE = "CREATE TABLE IF NOT EXISTS PERIOD (NAME TEXT, PRIMARY KEY(NAME) )";
     private static final String CREATE_SESSION_TABLE = "CREATE TABLE IF NOT EXISTS SESSION (ID INTEGER, " +
             "NAME TEXT, " +
@@ -50,6 +54,7 @@ public class DatabaseManager {
             "JOIN WORD_FREQUENCY ON TF.WORD = WORD_FREQUENCY.WORD";
     private static final String DROP_SPEECH_TABLE = "DROP TABLE IF EXISTS SPEECH";
     private static final String DROP_MEMBER_TABLE = "DROP TABLE IF EXISTS MEMBER";
+    private static final String DROP_POLITICAL_PARTY_TABLE = "DROP TABLE IF EXISTS POLITICAL_PARTY";
     private static final String DROP_PERIOD_TABLE = "DROP TABLE IF EXISTS PERIOD";
     private static final String DROP_SESSION_TABLE = "DROP TABLE IF EXISTS SESSION";
     private static final String DROP_SITTING_TABLE = "DROP TABLE IF EXISTS SITTING";
@@ -96,10 +101,10 @@ public class DatabaseManager {
             statement.execute(DROP_SESSION_TABLE);
             statement.execute(DROP_SITTING_TABLE);
             statement.execute(DROP_MEMBER_TABLE);
+            statement.execute(DROP_POLITICAL_PARTY_TABLE);
             statement.execute(DROP_SPEECH_TABLE);
             statement.execute(DROP_TF_TABLE);
             statement.execute(DROP_NUMBER_OF_SPEECHES_WITH_WORD_TABLE);
-            //statement.execute(DROP_IDF_TABLE);
             statement.execute(DROP_IDF_TF_TABLE);
 
             Functions.println("Dropped tables successfully.");
@@ -114,6 +119,7 @@ public class DatabaseManager {
             statement.execute(CREATE_PERIOD_TABLE);
             statement.execute(CREATE_SESSION_TABLE);
             statement.execute(CREATE_SITTING_TABLE);
+            statement.execute(CREATE_POLITICAL_PARTY_TABLE);
             statement.execute(CREATE_MEMBER_TABLE);
             statement.execute(CREATE_SPEECH_TABLE);
             statement.execute(CREATE_TF_TABLE);

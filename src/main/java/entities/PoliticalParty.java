@@ -1,22 +1,34 @@
 package entities;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Objects;
 
-public class PoliticalParty {
+public class PoliticalParty extends Entity{
     private final String name;
-    private final Set<Member> members;
 
     public PoliticalParty(String name) {
+        super();
         this.name = name;
-        this.members = new HashSet<>();
     }
 
-    public void addMember(Member member) {
-        this.members.add(member);
+    public PoliticalParty(int id, String name) {
+        setId(id);
+        this.name = name;
     }
 
     public String getName() {
         return name;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PoliticalParty that = (PoliticalParty) o;
+        return Objects.equals(name, that.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
     }
 }

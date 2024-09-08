@@ -1,7 +1,5 @@
 package config;
 
-import utility.Functions;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
@@ -13,6 +11,7 @@ public class Config {
     public final static String TEST;
     public final static String DB_URL;
     public final static boolean DROP_AND_RECREATE_TABLES;
+    public final static boolean EXTRACT_KEY_WORDS;
     public final static int EXECUTE_BATCH_AFTER;
 
     static {
@@ -22,6 +21,7 @@ public class Config {
 
             DROP_AND_RECREATE_TABLES = Boolean.parseBoolean(properties.getProperty(Property.DROP_AND_RECREATE_TABLES.name()));
             EXECUTE_BATCH_AFTER = Integer.parseInt(properties.getProperty(Property.EXECUTE_BATCH_AFTER.name()));
+            EXTRACT_KEY_WORDS = Boolean.parseBoolean(properties.getProperty(Property.EXTRACT_KEY_WORDS.name()));
             BIG = properties.getProperty(Property.BIG_CSV_PATH.name());
             NORMAL = properties.getProperty(Property.NORMAL_CSV_PATH.name());
             TEST = properties.getProperty(Property.TEST_CSV_PATH.name());

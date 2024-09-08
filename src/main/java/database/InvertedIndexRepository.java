@@ -55,7 +55,6 @@ public class InvertedIndexRepository {
 
             connection.commit();
 
-            connection.setAutoCommit(true);
             tfScores.clear();
 
         } catch (SQLException e) {
