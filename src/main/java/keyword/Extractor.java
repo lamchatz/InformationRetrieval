@@ -40,7 +40,7 @@ public class Extractor {
 
         for (String date : DATES) {
             Functions.println("searched year: " + date + " for political parties");
-            for (Entry entry : keyWordRepository.getKeyWordForPoliticalParties(date)) {
+            for (Entry entry : keyWordRepository.getKeyWordsForPoliticalPartiesForEachYear(date)) {
                 politicalPartyHighestScore.merge(entry.getName(), entry, this::keepEntryWithMaxScore);
 
                 FileManager.writePoliticalPartyKeyWords(entry);

@@ -3,12 +3,14 @@ package csv;
 import config.Config;
 import database.InvertedIndexRepository;
 import database.MemberRepository;
+import database.PoliticalPartyMembersRepository;
 import database.PoliticalPartyRepository;
 import database.SpeechRepository;
 import entities.Government;
 import entities.InvertedIndex;
 import entities.Member;
 import entities.PoliticalParty;
+import entities.PoliticalPartyMemberRelation;
 import entities.Speech;
 import entities.parliament.Processor;
 import org.apache.commons.csv.CSVFormat;
@@ -45,6 +47,7 @@ public class Reader {
     public static void read() {
         final InvertedIndex invertedIndex = new InvertedIndex();
         final Set<Government> governments = new HashSet<>();
+        final Set<PoliticalPartyMemberRelation> politicalPartyMemberRelations = new HashSet<>();
         final Map<String, Integer> politicalParties = new HashMap<>();
         final Map<String, Integer> members = new HashMap<>(1524);
         final Processor parliamentProcessor = new Processor();
@@ -53,8 +56,9 @@ public class Reader {
         final MemberRepository memberRepository = new MemberRepository();
         final PoliticalPartyRepository politicalPartyRepository = new PoliticalPartyRepository();
         final SpeechRepository speechRepository = new SpeechRepository();
+        final PoliticalPartyMembersRepository politicalPartyMembersRepository = new PoliticalPartyMembersRepository();
 
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.BIG))) {
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.NORMAL))) {
             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader(HEADER).withFirstRecordAsHeader());
 
             long counter = 0;
@@ -89,13 +93,24 @@ public class Reader {
                     members.put(name, member.getId());
                 }
 
+                String sittingDate = csvRecord.get(SITTING_DATE);
+
+                PoliticalPartyMemberRelation politicalPartyMemberRelation = new PoliticalPartyMemberRelation(
+                        politicalParties.get(politicalPartyName),
+                        members.get(name),
+                        sittingDate);
+
+                if (politicalPartyMemberRelations.add(politicalPartyMemberRelation)) {
+                    politicalPartyMembersRepository.insert(politicalPartyMemberRelation);
+                }
+
                 final String sessionName = csvRecord.get(PARLIAMENTARY_SESSION);
                 final String sittingName = csvRecord.get(PARLIAMENTARY_SITTING);
 
                 parliamentProcessor.process(csvRecord.get(PARLIAMENTARY_PERIOD),
                         sessionName,
                         sittingName,
-                        csvRecord.get(SITTING_DATE));
+                        sittingDate);
 
                 //governments.add(Government.processGovernment(csvRecord.get(GOVERNMENT)));
 

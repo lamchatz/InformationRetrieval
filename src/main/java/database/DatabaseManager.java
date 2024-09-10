@@ -29,6 +29,15 @@ public class DatabaseManager {
 
     private static final String CREATE_POLITICAL_PARTY_TABLE = "CREATE TABLE IF NOT EXISTS POLITICAL_PARTY " +
             "(ID INTEGER, NAME TEXT, PRIMARY KEY(ID))";
+
+    private static final String CREATE_POLITICAL_PARTY_MEMBERS_TABLE = "CREATE TABLE IF NOT EXISTS POLITICAL_PARTY_MEMBERS (" +
+            "POLITICAL_PARTY_ID INTEGER, " +
+            "MEMBER_ID INTEGER, " +
+            "START_DATE STRING," +
+            "END_DATE STRING," +
+            "FOREIGN KEY (POLITICAL_PARTY_ID) REFERENCES POLITICAL_PARTY(ID), " +
+            "FOREIGN KEY (MEMBER_ID) REFERENCES MEMBER(ID)" +
+            ")";
     private static final String CREATE_PERIOD_TABLE = "CREATE TABLE IF NOT EXISTS PERIOD (NAME TEXT, PRIMARY KEY(NAME) )";
     private static final String CREATE_SESSION_TABLE = "CREATE TABLE IF NOT EXISTS SESSION (ID INTEGER, " +
             "NAME TEXT, " +
@@ -60,6 +69,7 @@ public class DatabaseManager {
     private static final String DROP_SITTING_TABLE = "DROP TABLE IF EXISTS SITTING";
     private static final String DROP_TF_TABLE = "DROP TABLE IF EXISTS TF";
     private static final String DROP_NUMBER_OF_SPEECHES_WITH_WORD_TABLE = "DROP TABLE IF EXISTS WORD_FREQUENCY";
+    private static final String DROP_POLITICAL_PARTY_MEMBERS_TABLE = "DROP TABLE IF EXISTS POLITICAL_PARTY_MEMBERS";
 
     //INDEXES
     private static final String CREATE_TF_WORD_INDEX = "CREATE INDEX IF NOT EXISTS TF_WORD_INDEX ON TF(WORD)";
@@ -97,6 +107,7 @@ public class DatabaseManager {
 
     private static void dropTables(Statement statement) {
         try {
+            statement.execute(DROP_POLITICAL_PARTY_MEMBERS_TABLE);
             statement.execute(DROP_PERIOD_TABLE);
             statement.execute(DROP_SESSION_TABLE);
             statement.execute(DROP_SITTING_TABLE);
@@ -106,6 +117,7 @@ public class DatabaseManager {
             statement.execute(DROP_TF_TABLE);
             statement.execute(DROP_NUMBER_OF_SPEECHES_WITH_WORD_TABLE);
             statement.execute(DROP_IDF_TF_TABLE);
+
 
             Functions.println("Dropped tables successfully.");
         } catch (SQLException e) {
@@ -121,6 +133,7 @@ public class DatabaseManager {
             statement.execute(CREATE_SITTING_TABLE);
             statement.execute(CREATE_POLITICAL_PARTY_TABLE);
             statement.execute(CREATE_MEMBER_TABLE);
+            statement.execute(CREATE_POLITICAL_PARTY_MEMBERS_TABLE);
             statement.execute(CREATE_SPEECH_TABLE);
             statement.execute(CREATE_TF_TABLE);
             statement.execute(CREATE_WORD_FREQUENCY_TABLE);
@@ -147,7 +160,7 @@ public class DatabaseManager {
         try (Connection connection = connect();
              Statement statement = connection.createStatement()) {
 
-            Functions.println("Calculating IDF*TF tabl");
+            Functions.println("Calculating IDF*TF table");
             statement.execute(String.format(CREATE_IDF_TF_TABLE, SpeechRepository.TOTAL_SPEECHES));
 
             Functions.println("Creating IDF_TF word index.");

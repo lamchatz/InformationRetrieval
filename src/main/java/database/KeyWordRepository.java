@@ -2,9 +2,9 @@ package database;
 
 import config.Config;
 import keyword.Entry;
-import utility.Functions;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -13,21 +13,26 @@ import java.util.Collection;
 public class KeyWordRepository {
 
     private static final String SELECT_UNIQUE_DATES = "SELECT DISTINCT (SUBSTR(DATE, -4)) AS DATE FROM SITTING ORDER BY DATE ASC";
-    private static final String SELECT_POLITICAL_PARTY_KEYWORD = "SELECT MAX(TOTAL_SCORE) AS SCORE, KEYWORD, POLITICAL_PARTY_NAME " +
-            "FROM (" +
+    private static final String SELECT_POLITICAL_PARTY_KEYWORD = "SELECT TOTAL_SCORE AS SCORE, KEYWORD, POLITICAL_PARTY_NAME " +
+            "FROM ( " +
                 "SELECT " +
-                "POLITICAL_PARTY.NAME AS POLITICAL_PARTY_NAME, " +
-                "IDF_TF.WORD AS KEYWORD, " +
-                "SUM(IDF_TF.SCORE) AS TOTAL_SCORE " +
+                    "POLITICAL_PARTY.NAME AS POLITICAL_PARTY_NAME," +
+                    "IDF_TF.WORD AS KEYWORD," +
+                    "SUM(IDF_TF.SCORE) AS TOTAL_SCORE, " +
+                    "ROW_NUMBER() OVER (PARTITION BY POLITICAL_PARTY.NAME ORDER BY SUM(IDF_TF.SCORE) DESC) AS RN " +
                 "FROM IDF_TF " +
-                "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
-                "JOIN MEMBER ON SPEECH.MEMBER_ID = MEMBER.ID " +
-                "JOIN SITTING ON SPEECH.SITTING_ID = SITTING.ID " +
-                "JOIN POLITICAL_PARTY ON MEMBER.POLITICAL_PARTY_ID " +
-                "WHERE SITTING.DATE LIKE '%%%s'" +
-                "GROUP BY POLITICAL_PARTY.NAME, IDF_TF.WORD" +
+                    "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
+                    "JOIN MEMBER ON SPEECH.MEMBER_ID = MEMBER.ID " +
+                    "JOIN POLITICAL_PARTY ON POLITICAL_PARTY.ID = MEMBER.POLITICAL_PARTY_ID " +
+                    "JOIN SITTING ON SPEECH.SITTING_ID = SITTING.ID " +
+                    "JOIN POLITICAL_PARTY_MEMBERS ON POLITICAL_PARTY.ID = POLITICAL_PARTY_MEMBERS.POLITICAL_PARTY_ID AND MEMBER.ID = POLITICAL_PARTY_MEMBERS.MEMBER_ID " +
+                "WHERE " +
+                    "SITTING.DATE LIKE ? " +
+                    "AND SUBSTR(POLITICAL_PARTY_MEMBERS.START_DATE, -4) <= SUBSTR(SITTING.DATE, -4) " +
+                    "AND (POLITICAL_PARTY_MEMBERS.END_DATE IS NULL OR SUBSTR(POLITICAL_PARTY_MEMBERS.END_DATE, -4) >= SUBSTR(SITTING.DATE, -4) ) " +
+                "GROUP BY POLITICAL_PARTY.NAME, IDF_TF.WORD " +
             ") " +
-            "GROUP BY POLITICAL_PARTY_NAME";
+            "WHERE RN <= ?;";
 
     private static final String SELECT_MEMBER_KEYWORD = "SELECT MAX(TOTAL_SCORE) AS SCORE, KEYWORD, MEMBER_NAME " +
             "FROM (" +
@@ -146,24 +151,28 @@ public class KeyWordRepository {
         return results;
     }
 
-    public Collection<Entry> getKeyWordForPoliticalParties(String date) {
+    public Collection<Entry> getKeyWordsForPoliticalPartiesForEachYear(String date) {
         Collection<Entry> results = new ArrayList<>();
 
-        String query = String.format(SELECT_POLITICAL_PARTY_KEYWORD, date);
-
         try (Connection connection = DatabaseManager.connect();
-             ResultSet resultSet = connection.prepareStatement(query).executeQuery()) {
-            while (resultSet.next()) {
-                results.add(new Entry(date, resultSet.getString("POLITICAL_PARTY_NAME"),
-                        resultSet.getString(KEYWORD),
-                        resultSet.getDouble(SCORE))
-                );
+             PreparedStatement selectStatement = connection.prepareStatement(SELECT_POLITICAL_PARTY_KEYWORD)) {
+
+            selectStatement.setString(1, '%' + date);
+            selectStatement.setInt(2, NUMBER_OF_KEYWORDS);
+
+            try (ResultSet resultSet = selectStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    results.add(new Entry(date, resultSet.getString("POLITICAL_PARTY_NAME"),
+                            resultSet.getString(KEYWORD),
+                            resultSet.getDouble(SCORE))
+                    );
+                }
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        Functions.println(results);
         return results;
     }
 
