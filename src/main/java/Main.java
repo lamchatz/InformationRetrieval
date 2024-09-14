@@ -2,6 +2,7 @@ import config.Config;
 import csv.Reader;
 import database.DatabaseManager;
 import keyword.Extractor;
+import similarity.Calculator;
 import utility.Functions;
 
 public class Main {
@@ -26,5 +27,9 @@ public class Main {
             extractor.extractKeyWordsForPoliticalParties();
             extractor.extractKeyWordsForSpeeches();
         }
+
+        Calculator calculator = new Calculator();
+        calculator.calculate5();
+        calculator.calculate();
     }
 }

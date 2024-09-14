@@ -33,9 +33,9 @@ public class InvertedIndexRepository {
             for (TF tf : tfScores) {
                 int speechId = tf.getSpeechId();
 
-                Collection<Entry<String, Double>> scores = tf.getScore();
+                Collection<Entry> scores = tf.getScore();
 
-                for (Entry<String, Double> entry : scores) {
+                for (Entry entry : scores) {
                     String word = entry.getKey();
 
                     insertIntoWordFrequency.setString(1, word);

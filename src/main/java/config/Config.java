@@ -13,6 +13,8 @@ public class Config {
     public static final boolean DROP_AND_RECREATE_TABLES;
     public static final boolean EXTRACT_KEY_WORDS;
     public static final int NUMBER_OF_KEY_WORDS;
+    public static final int TOP_K;
+    public static final int SIMILARITY_BATCH;
     public static final int EXECUTE_BATCH_AFTER;
 
     static {
@@ -24,6 +26,8 @@ public class Config {
             EXECUTE_BATCH_AFTER = Integer.parseInt(properties.getProperty(Property.EXECUTE_BATCH_AFTER.name()));
             EXTRACT_KEY_WORDS = Boolean.parseBoolean(properties.getProperty(Property.EXTRACT_KEY_WORDS.name()));
             NUMBER_OF_KEY_WORDS = Integer.parseInt(properties.getProperty(Property.NUMBER_OF_KEY_WORDS.name()));
+            TOP_K = Integer.parseInt(properties.getProperty(Property.TOP_K.name()));
+            SIMILARITY_BATCH = Integer.parseInt(properties.getProperty(Property.SIMILARITY_BATCH.name()));
             BIG = properties.getProperty(Property.BIG_CSV_PATH.name());
             NORMAL = properties.getProperty(Property.NORMAL_CSV_PATH.name());
             TEST = properties.getProperty(Property.TEST_CSV_PATH.name());

@@ -1,5 +1,6 @@
 package utility;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -43,7 +44,7 @@ public class Functions {
         return variants;
     }
 
-    public static <T> String generateInClauseFor(Set<T> parameters) {
+    public static <T> String generateInClauseFor(Collection<T> parameters) {
         return parameters.stream().map(String::valueOf).collect(Collectors.joining(COMMA, LEFT_PARENTHESIS, RIGHT_PARENTHESIS));
     }
 

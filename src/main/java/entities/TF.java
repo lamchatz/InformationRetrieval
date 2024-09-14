@@ -5,7 +5,7 @@ import java.util.Collection;
 
 public class TF {
     private final int speechId;
-    private final Collection<Entry<String, Double>> score;
+    private final Collection<Entry> score;
     private final int totalWords;
 
     public TF(int speechId, int totalWords) {
@@ -22,7 +22,7 @@ public class TF {
         return speechId;
     }
 
-    public Collection<Entry<String, Double>> getScore() {
+    public Collection<Entry> getScore() {
         return score;
     }
 }
