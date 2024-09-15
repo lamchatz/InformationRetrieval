@@ -3,17 +3,19 @@ package similarity;
 import config.Config;
 import database.MemberSimilarityRepository;
 
-import java.util.AbstractMap;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.Stack;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static config.Config.TOP_K;
 import static utility.Functions.println;
@@ -26,73 +28,56 @@ public class Calculator {
     private final List<Integer> memberIds;
     private final Map<Integer, Double> membersNorm;
     private final Map<Integer, Set<Integer>> calculatedMemberSimilarities;
-    private final PriorityQueue<Map.Entry<Pair<Integer>, Double>> topKSimilarities;
-    private final Map<Pair<String>, Double> similarities2;
+    private final PriorityQueue<Pair<Integer>> topKSimilarities;
     private final Set<Integer> blackList;
 
-    public Calculator() {
+    public Calculator()  {
         this.memberSimilarityRepository = new MemberSimilarityRepository();
         this.memberIds = memberSimilarityRepository.getMemberIds();
         this.NUMBER_OF_MEMBER_IDS = memberIds.size();
-        this.calculatedMemberSimilarities = new HashMap<>(1524);
-        this.similarities2 = new HashMap<>(); // Holds 1_159_026 combinations
-        this.membersNorm = new HashMap<>(1524); // Cache for norm values
-        this.blackList = new HashSet<>(1524);
+        this.calculatedMemberSimilarities = new HashMap<>(INITIAL_CAPACITY);
+        this.membersNorm = new HashMap<>(INITIAL_CAPACITY); // Cache for norm values
+        this.blackList = new HashSet<>(INITIAL_CAPACITY / 10);
 
-        topKSimilarities = new PriorityQueue<>(Comparator.comparingDouble(Map.Entry::getValue));
-
-        memberIds.forEach(id -> {
-            Set<Integer> set = new HashSet<>(INITIAL_CAPACITY);
-            set.add(id);  // Add the id itself to its own set
-            calculatedMemberSimilarities.put(id, set);
-        });
+        topKSimilarities = new PriorityQueue<>(Comparator.comparingDouble(Pair::getSimilarity));
     }
 
     public void calculate() {
-        Map<String, Map<String, Double>> membersWords = memberSimilarityRepository.getMembersWords();
-        Map<String, Double> membersNorm = new HashMap<>(INITIAL_CAPACITY);
-        membersWords.forEach((member, entries) -> {
-            membersNorm.put(member, norm(entries));
+        topKSimilarities.clear();
+        
+        Map<Integer, Map<String, Double>> membersWords = memberSimilarityRepository.getAllMemberWords();
+        membersWords.forEach((memberId, entries) -> {
+            membersNorm.put(memberId, norm(entries));
         });
 
-        Set<String> members = new HashSet<>(membersWords.keySet());
+        Set<Integer> members = new HashSet<>(membersWords.keySet());
 
-        for (String member : members) {
-            Map<String, Double> values = membersWords.remove(member);
+        for (Integer memberId : members) {
+            Map<String, Double> values = membersWords.remove(memberId);
 
-            for (Map.Entry<String, Map<String, Double>> entry : membersWords.entrySet()) {
-                double dot = dotProduct(values, entry.getValue());
-                double d1 = membersNorm.get(member);
-                double d2 = membersNorm.get(entry.getKey());
+            for (Map.Entry<Integer, Map<String, Double>> entry : membersWords.entrySet()) {
+                topKSimilarities.offer(new Pair<>(memberId, entry.getKey(), cosineSimilarity(memberId, values, entry)));
 
-                double similarity;
-                if (d1 <= 0.0 || d2 <= 0.0) {
-                    similarity = dot;
-                } else {
-                    similarity = dot / (d1 * d2);
+                // If the size of the priority queue exceeds k, remove the smallest element
+                if (topKSimilarities.size() > TOP_K) {
+                    topKSimilarities.poll();
                 }
-
-                similarities2.put(new Pair<>(member, entry.getKey()), similarity);
-                //System.out.println(similarity);
             }
         }
 
-        getTopSimilarities(similarities2);
+        getTopSimilarities();
     }
 
-    public void calculate5() {
+    public void calculateInBatches() {
+        topKSimilarities.clear();
+        initializeCalculatedSimilarities();
         for (int i = 0; i < NUMBER_OF_MEMBER_IDS; i++) {
-            //get next 500 not calculated members
             Integer originalMemberId = memberIds.get(i);
 
-            //println(i);
+            println(i);
 
             Map<String, Double> originalMemberWordsAndScores = memberSimilarityRepository.getWordsForId(originalMemberId);
             List<Integer> notCalculatedIds = iterateListAndGetIdsWithNoCalculatedSimilarity(calculatedMemberSimilarities.get(originalMemberId), i);
-
-//            println("Querying originalMemberId: " + originalMemberId);
-//            notCalculatedIds.forEach(e -> System.out.print(e + ", "));
-//            println("");
 
             Map<Integer, Map<String, Double>> memberWordsAndScore = memberSimilarityRepository.getWordsForIds(notCalculatedIds);
             while (!(notCalculatedIds.isEmpty() || memberWordsAndScore.isEmpty())) {
@@ -112,17 +97,11 @@ public class Calculator {
 
                     compareWithMember(fetchedMemberId, values, memberWordsAndScore);
                 }
-                // println("Calculated");
-
                 notCalculatedIds = iterateListAndGetIdsWithNoCalculatedSimilarity(calculatedMemberSimilarities.get(originalMemberId), i + SIMILARITY_BATCH);
-
-//                println("Querying originalMemberId: " + originalMemberId);
-//                notCalculatedIds.forEach(e -> System.out.print(e + ", "));
-//                println("");
             }
         }
 
-        getTopSimilarities2();
+        getTopSimilarities();
     }
 
 
@@ -136,7 +115,7 @@ public class Calculator {
                 calculatedSimilarities.add(otherMemberId);
                 calculatedMemberSimilarities.get(otherMemberId).add(id);
 
-                topKSimilarities.offer(new AbstractMap.SimpleEntry<>(new Pair<>(id, otherMemberId), cosineSimilarity(id, originalMemberWordsAndScores, entry)));
+                topKSimilarities.offer(new Pair<>(id, otherMemberId, cosineSimilarity(id, originalMemberWordsAndScores, entry)));
 
                 // If the size of the priority queue exceeds k, remove the smallest element
                 if (topKSimilarities.size() > TOP_K) {
@@ -188,37 +167,36 @@ public class Calculator {
         return notCalculatedIds;
     }
 
-    private void getTopSimilarities2() {
-        Stack<Map.Entry<Pair<Integer>, Double>> stack = new Stack<>();
-        // Print or use the top-k results
-        for (int i = 0; i < TOP_K; i++) {
-            stack.push(topKSimilarities.poll());
-        }
+    private void getTopSimilarities() {
+        Deque<Pair<String>> stack = new ArrayDeque<>();
+        Set<Integer> ids = topKSimilarities.stream()
+                .flatMap(pair -> Stream.of(pair.getMember1(), pair.getMember2()))
+                .collect(Collectors.toSet());
 
-        for (int i = 0; i < TOP_K; i++) {
-            println(stack.pop());
-        }
-    }
+        Map<Integer, String> names = memberSimilarityRepository.getMemberNames(ids);
 
-    private void getTopSimilarities(Map<Pair<String>, Double> pairSimilarities) {
-        List<Map.Entry<Pair<String>, Double>> topK = pairSimilarities.entrySet()
-                .stream()
-                .sorted(Map.Entry.<Pair<String>, Double>comparingByValue().reversed())
-                .limit(3)
-                .collect(Collectors.toList());
+        topKSimilarities
+                .forEach(pair -> {
+                    String name1 = Optional.ofNullable(names.get(pair.getMember1())).orElse("Unknown");
+                    String name2 = Optional.ofNullable(names.get(pair.getMember2())).orElse("Unknown");
+                    stack.push(new Pair<>(name1, name2, pair.getSimilarity()));
+                });
 
-        // Print or use the top-k results
-        topK.forEach(entry -> {
-            Pair<String> pair = entry.getKey();
-            Double score = entry.getValue();
-            println("Pair: " + pair + ", Score: " + score);
-        });
+        stack.forEach(System.out::println);
     }
 
     private Set<String> commonWords(Map<String, Double> a, Map<String, Double> b) {
         final Set<String> commonWords = new HashSet<>(a.keySet());
         commonWords.retainAll(b.keySet());
         return commonWords;
+    }
+
+    private void initializeCalculatedSimilarities() {
+        memberIds.forEach(id -> {
+            Set<Integer> set = new HashSet<>(INITIAL_CAPACITY);
+            set.add(id);  // Add the id itself to its own set
+            calculatedMemberSimilarities.put(id, set);
+        });
     }
 
     private double dotProduct(Map<String, Double> a, Map<String, Double> b) {

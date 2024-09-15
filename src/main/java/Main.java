@@ -28,8 +28,14 @@ public class Main {
             extractor.extractKeyWordsForSpeeches();
         }
 
-        Calculator calculator = new Calculator();
-        calculator.calculate5();
-        calculator.calculate();
+        if (Config.FIND_SIMILARITIES) {
+            Calculator calculator = new Calculator();
+
+            if (Config.FIND_SIMILARITIES_IN_BATCHES) {
+                calculator.calculateInBatches();
+            } else {
+                calculator.calculate();
+            }
+        }
     }
 }

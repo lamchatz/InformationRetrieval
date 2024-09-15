@@ -2,13 +2,15 @@ package similarity;
 
 import java.util.Objects;
 
-public class Pair <T>{
+public class Pair <T> {
     private final T member1;
     private final T member2;
+    private final Double similarity;
 
-    public Pair(T memberName1, T member2) {
+    public Pair(T memberName1, T member2, Double similarity) {
         this.member1 = memberName1;
         this.member2 = member2;
+        this.similarity = similarity;
     }
 
     public T getMember1() {
@@ -17,6 +19,10 @@ public class Pair <T>{
 
     public T getMember2() {
         return member2;
+    }
+
+    public Double getSimilarity() {
+        return similarity;
     }
 
     @Override
@@ -35,8 +41,9 @@ public class Pair <T>{
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer("Pair{");
-        sb.append("memberName1='").append(member1).append('\'');
-        sb.append(", memberName2='").append(member2).append('\'');
+        sb.append("member1=").append(member1);
+        sb.append(", member2=").append(member2);
+        sb.append(", similarity=").append(similarity);
         sb.append('}');
         return sb.toString();
     }

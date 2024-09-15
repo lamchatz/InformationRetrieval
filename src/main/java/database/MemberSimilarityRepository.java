@@ -1,48 +1,60 @@
 package database;
 
-import entities.Entry;
 import utility.Functions;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MemberSimilarityRepository {
     private static final String SELECT_MEMBERS_WORD = "SELECT " +
-            "MEMBER.NAME AS MEMBER_NAME," +
+            "MEMBER_ID," +
             "IDF_TF.WORD AS KEYWORD," +
             "AVG(IDF_TF.SCORE) AS SCORE " +
             "FROM IDF_TF " +
             "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
-            "JOIN MEMBER ON SPEECH.MEMBER_ID = MEMBER.ID " +
-            "GROUP BY MEMBER.NAME, WORD " +
-            "ORDER BY MEMBER.NAME";
-
-    private static final String SELECT_QUERY = "SELECT IDF_TF.WORD AS KEYWORD, AVG(IDF_TF.SCORE) AS SCORE " +
-            "FROM IDF_TF JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
+            "GROUP BY MEMBER_ID, WORD";
+    private static final String SELECT_WORDS_FOR_ID = "SELECT " +
+            "MEMBER_ID," +
+            "IDF_TF.WORD AS KEYWORD," +
+            "AVG(IDF_TF.SCORE) AS SCORE " +
+            "FROM IDF_TF " +
+            "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
             "WHERE MEMBER_ID = %d " +
             "GROUP BY MEMBER_ID, WORD";
+    private static final String SELECT_MEMBER_NAMES_FOR_IDS = "SELECT ID, NAME FROM MEMBER WHERE ID IN ";
+    private static final String ID = "ID";
+    private static final String NAME = "NAME";
+    private static final String SELECT_WORDS_FOR_MEMBER_IDS = "SELECT " +
+            "MEMBER_ID," +
+            "IDF_TF.WORD AS KEYWORD," +
+            "AVG(IDF_TF.SCORE) AS SCORE " +
+            "FROM IDF_TF " +
+            "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
+            "WHERE MEMBER_ID IN %s GROUP BY MEMBER_ID, WORD";
+    private static final String KEYWORD = "KEYWORD";
+    private static final String SCORE = "SCORE";
+    private static final String MEMBER_ID = "MEMBER_ID";
+    private static final String SELECT_MEMBER_IDS = "SELECT ID FROM MEMBER";
 
     private final List<Integer> memberIds;
 
     public MemberSimilarityRepository() {
         this.memberIds = selectMemberIds();
-        //createMemberWordsView();
     }
 
     private List<Integer> selectMemberIds() {
         List<Integer> memberIds = new ArrayList<>(1524);
 
         try (Connection connection = DatabaseManager.connect();
-             ResultSet resultSet = connection.prepareStatement("SELECT ID FROM MEMBER").executeQuery()) {
+             ResultSet resultSet = connection.prepareStatement(SELECT_MEMBER_IDS).executeQuery()) {
             while (resultSet.next()) {
-                memberIds.add(resultSet.getInt("ID"));
+                memberIds.add(resultSet.getInt(ID));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -51,39 +63,14 @@ public class MemberSimilarityRepository {
         return memberIds;
     }
 
-    private void createMemberWordsView() {
-        try (Connection connection = DatabaseManager.connect()) {
-            connection.setAutoCommit(false);
-            for (Integer id : memberIds) {
-                String sql = String.format(SELECT_QUERY, id);
-
-                try (PreparedStatement preparedStatement = connection.prepareStatement("CREATE VIEW IF NOT EXISTS WORDS_OF_" + id + " AS " + sql)) {
-                    preparedStatement.execute();
-                }
-            }
-
-            connection.commit();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
     public Map<Integer, Map<String, Double>> getWordsForIds(List<Integer> memberIds) {
         Map<Integer, Map<String, Double>> memberWords = new HashMap<>(1524);
 
         if (!memberIds.isEmpty()) {
-            String sql = "SELECT " +
-                    "MEMBER_ID," +
-                    "IDF_TF.WORD AS KEYWORD," +
-                    "AVG(IDF_TF.SCORE) AS SCORE " +
-                    "FROM IDF_TF " +
-                    "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
-                    "WHERE MEMBER_ID IN " + Functions.generateInClauseFor(memberIds) +
-                    " GROUP BY MEMBER_ID, WORD";
             try (Connection connection = DatabaseManager.connect();
-                 ResultSet resultSet = connection.prepareStatement(sql).executeQuery()) {
+                 ResultSet resultSet = connection.prepareStatement(String.format(SELECT_WORDS_FOR_MEMBER_IDS, Functions.generateInClauseFor(memberIds))).executeQuery()) {
                 while (resultSet.next()) {
-                    memberWords.computeIfAbsent(resultSet.getInt("MEMBER_ID"), k -> new HashMap<>()).put(resultSet.getString("KEYWORD"), resultSet.getDouble("SCORE"));
+                    memberWords.computeIfAbsent(resultSet.getInt(MEMBER_ID), k -> new HashMap<>()).put(resultSet.getString(KEYWORD), resultSet.getDouble(SCORE));
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -96,18 +83,10 @@ public class MemberSimilarityRepository {
     public Map<String, Double> getWordsForId(Integer id) {
         Map<String, Double> memberWords = new HashMap<>();
 
-        String sql = "SELECT " +
-                "MEMBER_ID," +
-                "IDF_TF.WORD AS KEYWORD," +
-                "AVG(IDF_TF.SCORE) AS SCORE " +
-                "FROM IDF_TF " +
-                "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
-                "WHERE MEMBER_ID = " + id +
-                " GROUP BY MEMBER_ID, WORD";
         try (Connection connection = DatabaseManager.connect();
-             ResultSet resultSet = connection.prepareStatement(sql).executeQuery()) {
+             ResultSet resultSet = connection.prepareStatement(String.format(SELECT_WORDS_FOR_ID, id)).executeQuery()) {
             while (resultSet.next()) {
-                memberWords.put(resultSet.getString("KEYWORD"), resultSet.getDouble("SCORE"));
+                memberWords.put(resultSet.getString(KEYWORD), resultSet.getDouble(SCORE));
             }
 
         } catch (SQLException e) {
@@ -117,78 +96,36 @@ public class MemberSimilarityRepository {
         return memberWords;
     }
 
-    public Map<String, Map<String, Double>> getMembersWords() {
-        Map<String, Map<String, Double>> memberWords = new HashMap<>(1524);
+    public Map<Integer, Map<String, Double>> getAllMemberWords() {
+        Map<Integer, Map<String, Double>> memberWords = new HashMap<>(1524);
         try (Connection connection = DatabaseManager.connect();
              ResultSet resultSet = connection.prepareStatement(SELECT_MEMBERS_WORD).executeQuery()) {
 
             while (resultSet.next()) {
-                memberWords.computeIfAbsent(resultSet.getString("MEMBER_NAME"), k -> new HashMap<>()).put(resultSet.getString("KEYWORD"), resultSet.getDouble("SCORE"));
+                memberWords.computeIfAbsent(resultSet.getInt(MEMBER_ID), k -> new HashMap<>()).put(resultSet.getString(KEYWORD), resultSet.getDouble(SCORE));
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
         return memberWords;
-    }
-
-    public Map<String, Double> ss(Integer id) {
-        String sql1 = "SELECT * FROM WORDS_OF_" + id;
-        HashMap<String, Double> membersWords = new HashMap<>();
-
-        try (Connection connection = DatabaseManager.connect();
-             ResultSet resultSet1 = connection.prepareStatement(sql1).executeQuery()) {
-            HashMap<String, Double> wordScores1 = new HashMap<>();
-            while (resultSet1.next()) {
-                membersWords.put(resultSet1.getString("KEYWORD"), resultSet1.getDouble("SCORE"));
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return membersWords;
-    }
-
-    public Map<Integer, Map<String, Double>> s(Integer id1, Integer id2) {
-        String sql1 = "SELECT * FROM WORDS_OF_" + id1;
-        String sql2 = "SELECT * FROM WORDS_OF_" + id2;
-
-        HashMap<Integer, Map<String, Double>> membersWords = new HashMap<>(2);
-
-
-        try (Connection connection = DatabaseManager.connect();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql1);
-             PreparedStatement preparedStatement2 = connection.prepareStatement(sql2);
-             ResultSet resultSet1 = preparedStatement.executeQuery();
-             ResultSet resultSet2 = preparedStatement2.executeQuery()) {
-            HashMap<String, Double> wordScores1 = new HashMap<>();
-            while (resultSet1.next()) {
-                wordScores1.put(resultSet1.getString("KEYWORD"), resultSet1.getDouble("SCORE"));
-            }
-
-            HashMap<String, Double> wordScores2 = new HashMap<>();
-            while (resultSet2.next()) {
-                wordScores2.put(resultSet1.getString("KEYWORD"), resultSet1.getDouble("SCORE"));
-            }
-
-            membersWords.put(id1, wordScores1);
-            membersWords.put(id2, wordScores2);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return membersWords;
     }
 
     public List<Integer> getMemberIds() {
         return memberIds;
     }
 
-    public void print(Map<String, Collection<Entry>> map) {
-        for (Map.Entry<String, Collection<Entry>> entry : map.entrySet()) {
-            System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
-        }
-    }
+    public Map<Integer, String> getMemberNames(Set<Integer> ids) {
+        Map<Integer, String> names = new HashMap<>(ids.size());
 
+        try (Connection connection = DatabaseManager.connect();
+             ResultSet resultSet = connection.prepareStatement(SELECT_MEMBER_NAMES_FOR_IDS + Functions.generateInClauseFor(ids)).executeQuery()) {
+            while (resultSet.next()) {
+                names.put(resultSet.getInt(ID), resultSet.getString(NAME));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return names;
+    }
 }
