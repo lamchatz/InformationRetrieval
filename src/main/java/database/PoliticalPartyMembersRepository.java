@@ -1,6 +1,7 @@
 package database;
 
 import entities.PoliticalPartyMemberRelation;
+import utility.Functions;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -27,7 +28,7 @@ public class PoliticalPartyMembersRepository {
 
             int politicalPartyId = politicalPartyMemberRelation.getPoliticalPartyId();
             int memberId = politicalPartyMemberRelation.getMemberId();
-            String from = politicalPartyMemberRelation.getFrom();
+            String from = Functions.convertDateFormat(politicalPartyMemberRelation.getFrom());
 
             update.setString(1, from);
             update.setInt(2, memberId);

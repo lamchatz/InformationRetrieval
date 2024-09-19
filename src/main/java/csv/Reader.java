@@ -41,7 +41,6 @@ public class Reader {
     public static final String MEMBER_GENDER = "member_gender";
     public static final String SPEECH = "speech";
     private static final String[] HEADER = {MEMBER_NAME, SITTING_DATE, PARLIAMENTARY_PERIOD, PARLIAMENTARY_SESSION, PARLIAMENTARY_SITTING, POLITICAL_PARTY, GOVERNMENT, MEMBER_REGION, ROLES, MEMBER_GENDER, SPEECH};
-    private static final String[] HEADER2 = {MEMBER_NAME, POLITICAL_PARTY, SPEECH};
     private static final String ANONYMOUS = "Anonymous";
 
     public static void read() {
@@ -58,7 +57,7 @@ public class Reader {
         final SpeechRepository speechRepository = new SpeechRepository();
         final PoliticalPartyMembersRepository politicalPartyMembersRepository = new PoliticalPartyMembersRepository();
 
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.NORMAL))) {
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.BIG))) {
             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader(HEADER).withFirstRecordAsHeader());
 
             long counter = 0;

@@ -1,29 +1,40 @@
 package database;
 
+import dto.InfoToShow;
+import dto.Member;
+import dto.Period;
 import utility.Functions;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class SearchRepository {
 
     private static final String SELECT_SPEECH_TOTAL_WORDS = "SELECT ID, TOTAL_WORDS FROM SPEECH WHERE ID IN ";
-    private static final String BASE_SELECT_IDF_TF_VALUES_OF_WORD = "SELECT SCORE, SPEECH_ID FROM IDF_TF ";
-    private static final String BASE_SELECT_IDF_TF_VALUES_OF_WORD_WITHOUT_ACCENT = "SELECT SCORE, WORD, SPEECH_ID FROM IDF_TF ";
+    private static final String BASE_SELECT_IDF_TF_VALUES = "SELECT SCORE, WORD, SPEECH_ID FROM IDF_TF ";
+    private static final String SELECT_ALL_INFO_TO_SHOW = "SELECT DISTINCT CONTENT, " +
+            "MEMBER.NAME AS MEMBER_NAME, POLITICAL_PARTY.NAME AS POLITICAL_PARTY, REGION, " +
+            "ROLE, GENDER, SITTING.NAME AS SITTING_NAME, DATE, " +
+            "SESSION.NAME AS SESSION_NAME, PERIOD_NAME " +
+            "FROM SPEECH " +
+            "JOIN MEMBER ON (SPEECH.MEMBER_ID = MEMBER.ID) " +
+            "JOIN POLITICAL_PARTY_MEMBERS ON (POLITICAL_PARTY_MEMBERS.MEMBER_ID = MEMBER.ID) " +
+            "JOIN POLITICAL_PARTY ON POLITICAL_PARTY_MEMBERS.POLITICAL_PARTY_ID = POLITICAL_PARTY.ID " +
+            "JOIN SITTING ON (SPEECH.SITTING_ID = SITTING.ID) " +
+            "JOIN SESSION ON (SITTING.SESSION_ID = SESSION.ID) " +
+            "JOIN PERIOD ON (SESSION.PERIOD_NAME = PERIOD.NAME) " +
+            "WHERE STRFTIME('%Y-%m-%d', SITTING.DATE) BETWEEN " +
+            "STRFTIME('%Y-%m-%d', POLITICAL_PARTY_MEMBERS.START_DATE) " +
+            "AND COALESCE(STRFTIME('%Y-%m-%d', POLITICAL_PARTY_MEMBERS.END_DATE), '9999-12-31') " +
+            "AND SPEECH.ID IN ";
 
-    private static final String ID = "ID";
-    private static final String SPEECH_ID = "SPEECH_ID";
-    private static final String TOTAL_WORDS = "TOTAL_WORDS";
-    private static final String WORD = "WORD";
-    private static final String SINGLE_QUOTE = "'";
-    private static final String SINGLE_QUOTE_PARENTHESIS = "') ";
-    private static final String SPACE = " ";
-    private static final String SINGLE_QUOTE_WITH_SPACE = "' ";
-    private static final String PERCENTAGE_SINGLE_QUOTE_WITH_SPACE = "%' ";
     private static final String JOIN_SPEECH_ON_TF = "JOIN SPEECH ON (TF.SPEECH_ID = SPEECH.ID) ";
     private static final String JOIN_MEMBER_ON_SPEECH = "JOIN MEMBER ON (SPEECH.MEMBER_ID = MEMBER.ID) ";
     private static final String JOIN_SITTING_ON_SPEECH = "JOIN SITTING ON (SPEECH.SITTING_ID = SITTING.ID) ";
@@ -33,9 +44,25 @@ public class SearchRepository {
     private static final String AND_SITTING_DATE_GREATER_THAN = "AND DATE >= '";
     private static final String AND_SESSION_NAME = "AND (SESSION.NAME = '";
     private static final String OR_SESSION_PERIOD_NAME = "' OR SESSION.PERIOD_NAME = '";
-    private static final String WHERE_WORD = "WHERE WORD = '";
-    private static final String WHERE_WORD_IN_ = "WHERE WORD IN ";
+    private static final String WHERE_WORD_IN = "WHERE WORD IN ";
+    private static final String ID = "ID";
+    private static final String SPEECH_ID = "SPEECH_ID";
+    private static final String TOTAL_WORDS = "TOTAL_WORDS";
+    private static final String WORD = "WORD";
+    private static final String SINGLE_QUOTE = "'";
+    private static final String SINGLE_QUOTE_PARENTHESIS = "') ";
+    private static final String SPACE = " ";
+    private static final String SINGLE_QUOTE_WITH_SPACE = "' ";
+    private static final String PERCENTAGE_SINGLE_QUOTE_WITH_SPACE = "%' ";
     private static final String SCORE = "SCORE";
+    private static final String MEMBER_NAME = "MEMBER_NAME";
+    private static final String POLITICAL_PARTY = "POLITICAL_PARTY";
+    private static final String REGION = "REGION";
+    private static final String ROLE = "ROLE";
+    private static final String SITTING_NAME = "SITTING_NAME";
+    private static final String CONTENT = "CONTENT";
+    private static final String SESSION_NAME = "SESSION_NAME";
+    private static final String PERIOD_NAME = "PERIOD_NAME";
 
     public SearchRepository() {
         super();
@@ -57,34 +84,47 @@ public class SearchRepository {
         return speechTotalWords;
     }
 
-    public Map<Integer, Double> selectIdfTFValuesOfWord(String searchWord, String... args) {
-        Map<Integer, Double> tfOfSpeeches = new HashMap<>(30000);
+    public Map<String, Map<Integer, Double>> selectIdfTFValues(List<String> searchWords, String... args) {
+        Map<String, Map<Integer, Double>> idfTfOfSpeechesForWord = new HashMap<>(30000);
 
-        StringBuilder whereClause = new StringBuilder(WHERE_WORD).append(searchWord).append(SINGLE_QUOTE_WITH_SPACE);
+        StringBuilder whereClause = new StringBuilder(WHERE_WORD_IN).append(Functions.generateInClauseFor(searchWords));
 
-        String s = BASE_SELECT_IDF_TF_VALUES_OF_WORD + createIdfTfValueOfWordQueryFor(whereClause, args);
+        String s = BASE_SELECT_IDF_TF_VALUES + createIdfTfValueOfWordQueryFor(whereClause, args);
 
         Functions.println(s);
         try (Connection connection = DatabaseManager.connect();
              ResultSet resultSet = connection.prepareStatement(s).executeQuery()) {
             while (resultSet.next()) {
-                tfOfSpeeches.put(resultSet.getInt(SPEECH_ID), resultSet.getDouble(SCORE));
+                double idfTf = resultSet.getDouble(SCORE);
+                int speechId = resultSet.getInt(SPEECH_ID);
+                String word = resultSet.getString(WORD);
+
+                if (!idfTfOfSpeechesForWord.containsKey(word)) {
+                    idfTfOfSpeechesForWord.put(word, new HashMap<>());
+                }
+
+                Map<Integer, Double> idfTfOfSpeech = idfTfOfSpeechesForWord.get(word);
+                idfTfOfSpeech.put(speechId, idfTf);
+
+                idfTfOfSpeechesForWord.put(word, idfTfOfSpeech);
+
+                //idfTfOfSpeechesForWord.put(resultSet.getInt(SPEECH_ID), resultSet.getDouble(SCORE));
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        Functions.println(tfOfSpeeches);
+        Functions.println(idfTfOfSpeechesForWord);
 
-        return tfOfSpeeches;
+        return idfTfOfSpeechesForWord;
     }
 
 
     public Map<String, Map<Integer, Double>> selectIdfTfValuesForWordWithoutAccent(String searchWord, String... args) {
         Map<String, Map<Integer, Double>> idfTfOfSpeechesForWord = new HashMap<>();
 
-        StringBuilder whereClause = new StringBuilder(WHERE_WORD_IN_).append(Functions.generateInClauseFor(Functions.generateAccentVariants(searchWord))).append(SPACE);
-        String s = BASE_SELECT_IDF_TF_VALUES_OF_WORD_WITHOUT_ACCENT + createIdfTfValueOfWordQueryFor(whereClause, args);
+        StringBuilder whereClause = new StringBuilder(WHERE_WORD_IN).append(Functions.generateInClauseFor(Functions.generateAccentVariants(searchWord))).append(SPACE);
+        String s = BASE_SELECT_IDF_TF_VALUES + createIdfTfValueOfWordQueryFor(whereClause, args);
 
         Functions.println(s);
 
@@ -162,6 +202,34 @@ public class SearchRepository {
         }
 
         return joins.append(whereClause).toString();
+    }
+
+    public Collection<InfoToShow> getAllInfoFor(List<Integer> speechIds) {
+        Collection<InfoToShow> infoToShowCollection = new ArrayList<>(speechIds.size());
+
+        if (!speechIds.isEmpty()) {
+            try (Connection connection = DatabaseManager.connect();
+                 ResultSet resultSet = connection.prepareStatement(SELECT_ALL_INFO_TO_SHOW + Functions.generateInClauseFor(speechIds)).executeQuery()) {
+
+                while (resultSet.next()) {
+                    Member member = new Member(resultSet.getString(MEMBER_NAME),
+                            resultSet.getString(POLITICAL_PARTY),
+                            resultSet.getString(REGION),
+                            resultSet.getString(ROLE)
+                    );
+                    Period period = new Period(resultSet.getString(PERIOD_NAME),
+                            resultSet.getString(SESSION_NAME),
+                            resultSet.getString(SITTING_NAME)
+                    );
+
+                    infoToShowCollection.add(new InfoToShow(resultSet.getString(CONTENT), member, period));
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return infoToShowCollection;
     }
 }
 

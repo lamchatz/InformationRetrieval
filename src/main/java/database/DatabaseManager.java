@@ -159,6 +159,8 @@ public class DatabaseManager {
     public static void createIdfTfTable() {
         try (Connection connection = connect();
              Statement statement = connection.createStatement()) {
+            statement.execute("PRAGMA SYNCHRONOUS = OFF;");
+
 
             Functions.println("Calculating IDF*TF table");
             statement.execute(String.format(CREATE_IDF_TF_TABLE, SpeechRepository.TOTAL_SPEECHES));

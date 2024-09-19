@@ -3,6 +3,7 @@ package database;
 import entities.parliament.Period;
 import entities.parliament.Session;
 import entities.parliament.Sitting;
+import utility.Functions;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -37,7 +38,7 @@ public class PeriodRepository {
                     insertIntoSitting.setLong(1, sitting.getId());
                     insertIntoSitting.setString(2, sitting.getName());
                     insertIntoSitting.setLong(3, session.getId());
-                    insertIntoSitting.setString(4, sitting.getDate());
+                    insertIntoSitting.setString(4, Functions.convertDateFormat(sitting.getDate()));
                     insertIntoSitting.addBatch();
                 }
             }

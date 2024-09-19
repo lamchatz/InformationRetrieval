@@ -18,7 +18,7 @@ public class Main {
         SearchEngine searchEngine = new SearchEngine();
 
         Functions.println("Searching... ");
-        //searchEngine.search("αποκατάσταση");
+        searchEngine.search("αποκατάσταση τραγωδία σημαντικό");
         //searchEngine.search("αποκατάσταση κανεις τραγωδία ΣΗΜΑΝΤΙΚΌ");
 
         if (Config.EXTRACT_KEY_WORDS) {
@@ -37,5 +37,7 @@ public class Main {
                 calculator.calculate();
             }
         }
+
+        //new ClustersRepository().getSpeechVectors();
     }
 }

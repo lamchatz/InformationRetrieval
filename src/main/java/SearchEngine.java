@@ -1,8 +1,8 @@
 import database.SearchRepository;
-import database.SpeechRepository;
 import dto.InfoToShow;
 import utility.Functions;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -14,14 +14,13 @@ import java.util.stream.Collectors;
 public class SearchEngine {
 
     private static final int MAX_SIZE = 5;
+    private static final String SINGLE_QUOTE = "'";
+    private static final String WHITE_SPACE = "\\s";
 
     private final SearchRepository searchRepository;
-    private final SpeechRepository speechRepository;
 
     public SearchEngine() {
         this.searchRepository = new SearchRepository();
-        this.speechRepository = new SpeechRepository();
-        speechRepository.clear();
     }
 
     public void search(String... args) {
@@ -33,19 +32,20 @@ public class SearchEngine {
             String question = args[0];
             Map<Integer, Double> accumulators = new HashMap<>(300_000);
 
-            for (String searchWord : question.toLowerCase().split("\\s")) {
+            String[] words = question.toLowerCase().split(WHITE_SPACE);
+            List<String> accentWords = new ArrayList<>(words.length);
+            for (String searchWord : words) {
                 if (Functions.hasAccent(searchWord)) {
-                    searchForAccentWord(accumulators, searchWord, args);
+                    accentWords.add(SINGLE_QUOTE + searchWord + SINGLE_QUOTE);
                 } else {
                     searchForWordWithoutAccent(accumulators, searchWord, args);
                 }
             }
+            searchForAccentWords(accumulators, accentWords, args);
 
             normalizeValues(accumulators);
 
             getTopSpeeches(accumulators);
-
-            //printAccordingToUserInput(speechRepository.getAllInfoFor(accumulators.keySet()));
         }
     }
 
@@ -70,11 +70,13 @@ public class SearchEngine {
         }
     }
 
-    private void searchForAccentWord(Map<Integer, Double> accumulators, String searchWord, String... args) {
-        Map<Integer, Double> idfTFValuesOfWord = searchRepository.selectIdfTFValuesOfWord(searchWord, args);
+    private void searchForAccentWords(Map<Integer, Double> accumulators, List<String> searchWords, String... args) {
+        Map<String, Map<Integer, Double>> idfTfOfSpeechesForWords = searchRepository.selectIdfTFValues(searchWords, args);
 
-        idfTFValuesOfWord.forEach((speechId, idfTf) ->
-                accumulators.merge(speechId, idfTf, Double::sum));
+        if (!idfTfOfSpeechesForWords.isEmpty()) {
+            idfTfOfSpeechesForWords.forEach( (word, idfTFValuesOfWord) -> idfTFValuesOfWord.forEach((speechId, idfTf) ->
+                    accumulators.merge(speechId, idfTf, Double::sum)));
+        }
     }
 
     private void searchForWordWithoutAccent(Map<Integer, Double> searchAccumulators, String searchWord, String... args) {
@@ -115,5 +117,10 @@ public class SearchEngine {
             Double score = entry.getValue();
             Functions.println("Speech ID: " + speechId + ", Score: " + score);
         });
+
+        printAccordingToUserInput(searchRepository.getAllInfoFor(topK.stream()
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList())));
+
     }
 }

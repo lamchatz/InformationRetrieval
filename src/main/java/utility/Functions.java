@@ -1,5 +1,7 @@
 package utility;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -22,6 +24,8 @@ public class Functions {
     private static final String LEFT_PARENTHESIS = "(";
     private static final String RIGHT_PARENTHESIS = ")";
     private static final String SINGLE_QUOTE = "'";
+    private static final DateTimeFormatter INPUT_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter OUTPUT_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     public static boolean isNotEmpty(String string) {
         return !(string == null || string.isBlank());
@@ -54,5 +58,9 @@ public class Functions {
 
     public static boolean hasAccent(String word) {
         return word.matches(ACCENT_PATTERN);
+    }
+
+    public static String convertDateFormat(String dateInDdMmYyyy) {
+        return LocalDate.parse(dateInDdMmYyyy, INPUT_FORMATTER).format(OUTPUT_FORMATTER);
     }
 }
