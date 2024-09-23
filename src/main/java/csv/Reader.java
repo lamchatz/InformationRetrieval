@@ -16,7 +16,6 @@ import entities.parliament.Processor;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import utility.Functions;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,6 +25,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import static utility.Functions.println;
 
 public class Reader {
     private static final int EXECUTE_BATCH_AFTER = Config.EXECUTE_BATCH_AFTER;
@@ -57,13 +58,11 @@ public class Reader {
         final SpeechRepository speechRepository = new SpeechRepository();
         final PoliticalPartyMembersRepository politicalPartyMembersRepository = new PoliticalPartyMembersRepository();
 
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.BIG))) {
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.NORMAL))) {
             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader(HEADER).withFirstRecordAsHeader());
 
             long counter = 0;
-            long id = 0;
             for (CSVRecord csvRecord : csvParser) {
-                id = csvRecord.getRecordNumber();
                 String name = csvRecord.get(MEMBER_NAME);
 
                 if (name == null || name.isBlank()) {
@@ -121,27 +120,26 @@ public class Reader {
                 invertedIndex.indexSpeech(speech);
                 speechRepository.addToBatch(speech);
 
-                //Functions.println(id);
                 if (counter == EXECUTE_BATCH_AFTER) {
-                    Functions.println(id);
+                    println(csvRecord.getRecordNumber());
                     counter = 0;
                     invertedIndexRepository.save(invertedIndex);
                 }
             }
 
-            Functions.println("Flushing parliament records...");
+            println("Flushing parliament records...");
             parliamentProcessor.flush();
 
-            Functions.println("Flushing speech records...");
+            println("Flushing speech records...");
             speechRepository.flushBatch();
 
-            Functions.println("Flushing politicalParty records...");
+            println("Flushing politicalParty records...");
             politicalPartyRepository.flushBatch();
 
-            Functions.println("Flushing member records...");
+            println("Flushing member records...");
             memberRepository.flushBatch();
 
-            Functions.println("Saving invertedIndex...");
+            println("Saving invertedIndex...");
             invertedIndexRepository.save(invertedIndex);
 
         } catch (IOException e) {

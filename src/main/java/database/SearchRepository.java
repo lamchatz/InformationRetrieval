@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static utility.Functions.println;
+
 public class SearchRepository {
 
     private static final String SELECT_SPEECH_TOTAL_WORDS = "SELECT ID, TOTAL_WORDS FROM SPEECH WHERE ID IN ";
@@ -30,12 +32,12 @@ public class SearchRepository {
             "JOIN SITTING ON (SPEECH.SITTING_ID = SITTING.ID) " +
             "JOIN SESSION ON (SITTING.SESSION_ID = SESSION.ID) " +
             "JOIN PERIOD ON (SESSION.PERIOD_NAME = PERIOD.NAME) " +
-            "WHERE STRFTIME('%Y-%m-%d', SITTING.DATE) BETWEEN " +
-            "STRFTIME('%Y-%m-%d', POLITICAL_PARTY_MEMBERS.START_DATE) " +
-            "AND COALESCE(STRFTIME('%Y-%m-%d', POLITICAL_PARTY_MEMBERS.END_DATE), '9999-12-31') " +
+            "WHERE SITTING.DATE BETWEEN " +
+            "POLITICAL_PARTY_MEMBERS.START_DATE " +
+            "AND COALESCE(POLITICAL_PARTY_MEMBERS.END_DATE, '9999-12-31') " +
             "AND SPEECH.ID IN ";
 
-    private static final String JOIN_SPEECH_ON_TF = "JOIN SPEECH ON (TF.SPEECH_ID = SPEECH.ID) ";
+    private static final String JOIN_SPEECH_ON_TF = "JOIN SPEECH ON (IDF_TF.SPEECH_ID = SPEECH.ID) ";
     private static final String JOIN_MEMBER_ON_SPEECH = "JOIN MEMBER ON (SPEECH.MEMBER_ID = MEMBER.ID) ";
     private static final String JOIN_SITTING_ON_SPEECH = "JOIN SITTING ON (SPEECH.SITTING_ID = SITTING.ID) ";
     private static final String JOIN_SESSION_ON_SITTING = "JOIN SESSION ON (SITTING.SESSION_ID = SESSION.ID) ";
@@ -60,6 +62,7 @@ public class SearchRepository {
     private static final String REGION = "REGION";
     private static final String ROLE = "ROLE";
     private static final String SITTING_NAME = "SITTING_NAME";
+    private static final String DATE = "DATE";
     private static final String CONTENT = "CONTENT";
     private static final String SESSION_NAME = "SESSION_NAME";
     private static final String PERIOD_NAME = "PERIOD_NAME";
@@ -87,11 +90,11 @@ public class SearchRepository {
     public Map<String, Map<Integer, Double>> selectIdfTFValues(List<String> searchWords, String... args) {
         Map<String, Map<Integer, Double>> idfTfOfSpeechesForWord = new HashMap<>(30000);
 
-        StringBuilder whereClause = new StringBuilder(WHERE_WORD_IN).append(Functions.generateInClauseFor(searchWords));
+        StringBuilder whereClause = new StringBuilder(WHERE_WORD_IN).append(Functions.generateInClauseFor(searchWords)).append(SPACE);
 
         String s = BASE_SELECT_IDF_TF_VALUES + createIdfTfValueOfWordQueryFor(whereClause, args);
 
-        Functions.println(s);
+        println(s);
         try (Connection connection = DatabaseManager.connect();
              ResultSet resultSet = connection.prepareStatement(s).executeQuery()) {
             while (resultSet.next()) {
@@ -107,14 +110,10 @@ public class SearchRepository {
                 idfTfOfSpeech.put(speechId, idfTf);
 
                 idfTfOfSpeechesForWord.put(word, idfTfOfSpeech);
-
-                //idfTfOfSpeechesForWord.put(resultSet.getInt(SPEECH_ID), resultSet.getDouble(SCORE));
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
-        Functions.println(idfTfOfSpeechesForWord);
 
         return idfTfOfSpeechesForWord;
     }
@@ -126,7 +125,7 @@ public class SearchRepository {
         StringBuilder whereClause = new StringBuilder(WHERE_WORD_IN).append(Functions.generateInClauseFor(Functions.generateAccentVariants(searchWord))).append(SPACE);
         String s = BASE_SELECT_IDF_TF_VALUES + createIdfTfValueOfWordQueryFor(whereClause, args);
 
-        Functions.println(s);
+        println(s);
 
         try (Connection connection = DatabaseManager.connect();
              ResultSet resultSet = connection.prepareStatement(s).executeQuery()) {
@@ -219,7 +218,8 @@ public class SearchRepository {
                     );
                     Period period = new Period(resultSet.getString(PERIOD_NAME),
                             resultSet.getString(SESSION_NAME),
-                            resultSet.getString(SITTING_NAME)
+                            resultSet.getString(SITTING_NAME),
+                            resultSet.getString(DATE)
                     );
 
                     infoToShowCollection.add(new InfoToShow(resultSet.getString(CONTENT), member, period));

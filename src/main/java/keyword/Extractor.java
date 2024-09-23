@@ -1,11 +1,13 @@
 package keyword;
 
 import database.KeyWordRepository;
-import utility.Functions;
+import utility.FileManager;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+
+import static utility.Functions.println;
 
 public class Extractor {
     private final KeyWordRepository keyWordRepository;
@@ -14,7 +16,7 @@ public class Extractor {
     public Extractor() {
         this.keyWordRepository = new KeyWordRepository();
         this.DATES = getDates();
-        FileManager.clearDirectory();
+        FileManager.clearKeywordsDirectory();
         FileManager.createKeyWordsDirectory();
         FileManager.createMembersSubDirectory();
         FileManager.createPoliticalPartiesSubDirectory();
@@ -25,8 +27,9 @@ public class Extractor {
         final Map<String, Entry> memberHighestScore = new HashMap<>(1524); //number of members in the big dataset
 
         for (String date : DATES) {
-            Functions.println("Searched year " + date);
-            for (Entry entry :  keyWordRepository.getMembersKeyWordsForEachYear(date)) {
+            println("Searched year " + date);
+            Collection<Entry> membersKeyWordsForEachYear = keyWordRepository.getMembersKeyWordsForEachYear(date);
+            for (Entry entry : membersKeyWordsForEachYear) {
                 memberHighestScore.merge(entry.getName(), entry, this::keepEntryWithMaxScore);
 
                 FileManager.writeMemberKeyWords(entry);
@@ -39,8 +42,8 @@ public class Extractor {
         final Map<String, Entry> politicalPartyHighestScore = new HashMap<>(32); //number of political parties in the big dataset
 
         for (String date : DATES) {
-            Functions.println("searched year: " + date + " for political parties");
-            for (Entry entry : keyWordRepository.getKeyWordsForPoliticalPartiesForEachYear(date)) {
+            Collection<Entry> keyWordsForPoliticalPartiesForEachYear = keyWordRepository.getKeyWordsForPoliticalPartiesForEachYear(date);
+            for (Entry entry : keyWordsForPoliticalPartiesForEachYear) {
                 politicalPartyHighestScore.merge(entry.getName(), entry, this::keepEntryWithMaxScore);
 
                 FileManager.writePoliticalPartyKeyWords(entry);
@@ -52,8 +55,9 @@ public class Extractor {
 
     public void extractKeyWordsForSpeeches() {
         for (String date : DATES) {
-            Functions.println("searched year: " + date + " for speeches");
-            for (Entry entry : keyWordRepository.getKeyWordForSpeech(date)) {
+            println("searched year: " + date + " for speeches");
+            Collection<Entry> keyWordForSpeech = keyWordRepository.getKeyWordForSpeech(date);
+            for (Entry entry : keyWordForSpeech) {
                 FileManager.writeSpeechScores(entry);
             }
         }

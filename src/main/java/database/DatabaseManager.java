@@ -1,12 +1,13 @@
 package database;
 
 import config.Config;
-import utility.Functions;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+
+import static utility.Functions.println;
 
 public class DatabaseManager {
 
@@ -119,7 +120,7 @@ public class DatabaseManager {
             statement.execute(DROP_IDF_TF_TABLE);
 
 
-            Functions.println("Dropped tables successfully.");
+            println("Dropped tables successfully.");
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -138,7 +139,7 @@ public class DatabaseManager {
             statement.execute(CREATE_TF_TABLE);
             statement.execute(CREATE_WORD_FREQUENCY_TABLE);
 
-            Functions.println("Created tables successfully.");
+            println("Created tables successfully.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -147,10 +148,10 @@ public class DatabaseManager {
     public static void createTFIndex() {
         try (Connection connection = connect();
              Statement statement = connection.createStatement()) {
-            Functions.println("Creating TF word index");
+            println("Creating TF word index");
             statement.execute(CREATE_TF_WORD_INDEX);
 
-            Functions.println("Created table indexes successfully.");
+            println("Created table indexes successfully.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -162,13 +163,13 @@ public class DatabaseManager {
             statement.execute("PRAGMA SYNCHRONOUS = OFF;");
 
 
-            Functions.println("Calculating IDF*TF table");
+            println("Calculating IDF*TF table");
             statement.execute(String.format(CREATE_IDF_TF_TABLE, SpeechRepository.TOTAL_SPEECHES));
 
-            Functions.println("Creating IDF_TF word index.");
+            println("Creating IDF_TF word index.");
             statement.execute(CREATE_IDF_TF_WORD_INDEX);
 
-            Functions.println("Creating IDF_TF speech_id index.");
+            println("Creating IDF_TF speech_id index.");
             statement.execute(CREATE_IDF_TF_SPEECH_ID_INDEX);
         } catch (Exception e) {
             e.printStackTrace();

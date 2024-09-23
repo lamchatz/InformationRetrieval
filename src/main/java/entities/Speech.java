@@ -28,15 +28,9 @@ public class Speech extends Entity {
         return size;
     }
 
-//    public Member getMember() {return member;}
-
     public int getMemberId() {
         return memberId;
     }
-
-//    public Sitting getSitting() {
-//        return sitting;
-//    }
 
     public int getSittingId() {
         return sittingId;

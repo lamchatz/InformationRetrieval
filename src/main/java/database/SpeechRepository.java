@@ -2,13 +2,14 @@ package database;
 
 import config.Config;
 import entities.Speech;
-import utility.Functions;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+
+import static utility.Functions.println;
 
 public class SpeechRepository {
 
@@ -38,7 +39,7 @@ public class SpeechRepository {
     }
 
     public void executeBatch() {
-        Functions.println("Saving speeches...");
+        println("Saving speeches...");
         try (Connection connection = DatabaseManager.connect();
              PreparedStatement insertIntoSpeech = connection.prepareStatement(INSERT_INTO_SPEECH)) {
             connection.createStatement().execute("PRAGMA SYNCHRONOUS = OFF;");
@@ -57,7 +58,7 @@ public class SpeechRepository {
 
                     insertIntoSpeech.addBatch();
                 } else {
-                    Functions.println("No sitting was found for this speech!");
+                    println("No sitting was found for this speech!");
                 }
             }
 

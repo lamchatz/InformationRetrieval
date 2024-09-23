@@ -12,13 +12,13 @@ import java.util.Collection;
 
 public class KeyWordRepository {
 
-    private static final String SELECT_UNIQUE_DATES = "SELECT DISTINCT (SUBSTR(DATE, -4)) AS DATE FROM SITTING ORDER BY DATE ASC";
+    private static final String SELECT_UNIQUE_DATES = "SELECT DISTINCT (SUBSTR(DATE, 1, 4)) AS DATE FROM SITTING ORDER BY DATE ASC";
     private static final String SELECT_POLITICAL_PARTY_KEYWORD = "SELECT TOTAL_SCORE AS SCORE, KEYWORD, POLITICAL_PARTY_NAME " +
             "FROM ( " +
                 "SELECT " +
                     "POLITICAL_PARTY.NAME AS POLITICAL_PARTY_NAME," +
                     "IDF_TF.WORD AS KEYWORD," +
-                    "SUM(IDF_TF.SCORE) AS TOTAL_SCORE, " +
+                    "AVG(IDF_TF.SCORE) AS TOTAL_SCORE, " +
                     "ROW_NUMBER() OVER (PARTITION BY POLITICAL_PARTY.NAME ORDER BY SUM(IDF_TF.SCORE) DESC) AS RN " +
                 "FROM IDF_TF " +
                     "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
@@ -28,26 +28,12 @@ public class KeyWordRepository {
                     "JOIN POLITICAL_PARTY_MEMBERS ON POLITICAL_PARTY.ID = POLITICAL_PARTY_MEMBERS.POLITICAL_PARTY_ID AND MEMBER.ID = POLITICAL_PARTY_MEMBERS.MEMBER_ID " +
                 "WHERE " +
                     "SITTING.DATE LIKE ? " +
-                    "AND SUBSTR(POLITICAL_PARTY_MEMBERS.START_DATE, -4) <= SUBSTR(SITTING.DATE, -4) " +
-                    "AND (POLITICAL_PARTY_MEMBERS.END_DATE IS NULL OR SUBSTR(POLITICAL_PARTY_MEMBERS.END_DATE, -4) >= SUBSTR(SITTING.DATE, -4) ) " +
+                    "AND SITTING.DATE BETWEEN " +
+                    "POLITICAL_PARTY_MEMBERS.START_DATE " +
+                    "AND COALESCE(POLITICAL_PARTY_MEMBERS.END_DATE, '9999-12-31') " +
                 "GROUP BY POLITICAL_PARTY.NAME, IDF_TF.WORD " +
             ") " +
             "WHERE RN <= ?;";
-
-    private static final String SELECT_MEMBER_KEYWORD = "SELECT MAX(TOTAL_SCORE) AS SCORE, KEYWORD, MEMBER_NAME " +
-            "FROM (" +
-                "SELECT " +
-                "MEMBER.NAME AS MEMBER_NAME, " +
-                "IDF_TF.WORD AS KEYWORD, " +
-                "SUM(IDF_TF.SCORE) AS TOTAL_SCORE " +
-                "FROM IDF_TF " +
-                "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
-                "JOIN MEMBER ON SPEECH.MEMBER_ID = MEMBER.ID " +
-                "JOIN SITTING ON SPEECH.SITTING_ID = SITTING.ID " +
-                "WHERE SITTING.DATE LIKE '%%%s'" +
-                "GROUP BY MEMBER.NAME, IDF_TF.WORD" +
-            ") " +
-            "GROUP BY MEMBER_NAME";
 
     private static final String SELECT_MEMBER_K_KEYWORDS = "SELECT " +
             "MEMBER_NAME," +
@@ -58,16 +44,16 @@ public class KeyWordRepository {
                 "SELECT " +
                     "MEMBER.NAME AS MEMBER_NAME," +
                     "IDF_TF.WORD AS KEYWORD," +
-                    "SUM(IDF_TF.SCORE) AS SCORE," +
+                    "AVG(IDF_TF.SCORE) AS SCORE," +
                     "ROW_NUMBER() OVER (PARTITION BY MEMBER.NAME ORDER BY SUM(IDF_TF.SCORE) DESC) AS RN " +
                 "FROM IDF_TF " +
                     "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
                     "JOIN MEMBER ON SPEECH.MEMBER_ID = MEMBER.ID " +
                     "JOIN SITTING ON SPEECH.SITTING_ID = SITTING.ID " +
-                "WHERE SITTING.DATE LIKE '%%%s' " +
+                "WHERE SITTING.DATE LIKE ? " +
                 "GROUP BY MEMBER.NAME, IDF_TF.WORD " +
             ")" +
-            "WHERE RN <= %d " +
+            "WHERE RN <= ? " +
             "ORDER BY MEMBER_NAME, SCORE DESC;";
 
     private static final String SELECT_SPEECH_K_KEYWORDS =
@@ -100,7 +86,7 @@ public class KeyWordRepository {
             "JOIN SPEECH ON IDF_TF.SPEECH_ID = SPEECH.ID " +
             "JOIN MEMBER ON SPEECH.MEMBER_ID = MEMBER.ID " +
             "JOIN SITTING ON SPEECH.SITTING_ID = SITTING.ID " +
-            "WHERE SITTING.DATE LIKE '%%%S' " +
+            "WHERE SITTING.DATE LIKE '%s%%' " +
             "GROUP BY SPEECH_ID " +
             "ORDER BY SPEECH_ID";
     private static final String KEYWORD = "KEYWORD";
@@ -108,6 +94,11 @@ public class KeyWordRepository {
     private static final String MEMBER_NAME = "MEMBER_NAME";
     private static final String DATE = "DATE";
     private static final int NUMBER_OF_KEYWORDS = Config.NUMBER_OF_KEY_WORDS;
+    private static final char PERCENTAGE = '%';
+    private static final String POLITICAL_PARTY_NAME = "POLITICAL_PARTY_NAME";
+    private static final String SPEECH_ID = "SPEECH_ID";
+    private static final String CONTENT = "CONTENT";
+    private static final String KEYWORDS_SCORES = "KEYWORDS_SCORES";
 
     public KeyWordRepository() {
         super();
@@ -129,20 +120,23 @@ public class KeyWordRepository {
     }
 
     public Collection<Entry> getMembersKeyWordsForEachYear(String date) {
+        //Number of total members. Used to avoid constantly increasing the capacity, as it starts as 16. Probably not
+        //all members will appear for each year.
         Collection<Entry> results = new ArrayList<>(1524);
 
-        String query = String.format(SELECT_MEMBER_KEYWORD, date);
-        if (NUMBER_OF_KEYWORDS > 1 ) {
-            query = String.format(SELECT_MEMBER_K_KEYWORDS, date, NUMBER_OF_KEYWORDS);
-        }
-
         try (Connection connection = DatabaseManager.connect();
-             ResultSet resultSet = connection.prepareStatement(query).executeQuery()) {
-            while (resultSet.next()) {
-                results.add(new Entry(date, resultSet.getString(MEMBER_NAME),
-                        resultSet.getString(KEYWORD),
-                        resultSet.getDouble(SCORE))
-                );
+             PreparedStatement selectStatement = connection.prepareStatement(SELECT_MEMBER_K_KEYWORDS)) {
+
+            selectStatement.setString(1, date + PERCENTAGE);
+            selectStatement.setInt(2, NUMBER_OF_KEYWORDS);
+
+            try (ResultSet resultSet = selectStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    results.add(new Entry(date, resultSet.getString(MEMBER_NAME),
+                            resultSet.getString(KEYWORD),
+                            resultSet.getDouble(SCORE))
+                    );
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -157,12 +151,12 @@ public class KeyWordRepository {
         try (Connection connection = DatabaseManager.connect();
              PreparedStatement selectStatement = connection.prepareStatement(SELECT_POLITICAL_PARTY_KEYWORD)) {
 
-            selectStatement.setString(1, '%' + date);
+            selectStatement.setString(1, date + PERCENTAGE);
             selectStatement.setInt(2, NUMBER_OF_KEYWORDS);
 
             try (ResultSet resultSet = selectStatement.executeQuery()) {
                 while (resultSet.next()) {
-                    results.add(new Entry(date, resultSet.getString("POLITICAL_PARTY_NAME"),
+                    results.add(new Entry(date, resultSet.getString(POLITICAL_PARTY_NAME),
                             resultSet.getString(KEYWORD),
                             resultSet.getDouble(SCORE))
                     );
@@ -178,12 +172,13 @@ public class KeyWordRepository {
 
     public Collection<Entry> getKeyWordForSpeech(String date) {
         if (NUMBER_OF_KEYWORDS > 1) {
-            return getSpeechesTopKKeyWordsForEachYEar(date);
+            return getSpeechesTopKKeyWordsForEachYear(date);
         }
         return getSpeechesSingleKeyWordForEachYear(date);
     }
 
     private Collection<Entry> getSpeechesSingleKeyWordForEachYear(String date) {
+        //estimation of speeches per year, avoid constantly increasing the capacity. Initial capacity = 16
         Collection<Entry> results = new ArrayList<>(5000);
 
         String query = String.format(SELECT_SPEECH_KEYWORD, date);
@@ -194,8 +189,8 @@ public class KeyWordRepository {
                 results.add(new Entry(date, resultSet.getString(MEMBER_NAME),
                         resultSet.getString(KEYWORD),
                         resultSet.getDouble(SCORE),
-                        resultSet.getInt("SPEECH_ID"),
-                        resultSet.getString("CONTENT"))
+                        resultSet.getInt(SPEECH_ID),
+                        resultSet.getString(CONTENT))
                 );
             }
         } catch (SQLException e) {
@@ -205,7 +200,7 @@ public class KeyWordRepository {
         return results;
     }
 
-    private Collection<Entry> getSpeechesTopKKeyWordsForEachYEar(String date) {
+    private Collection<Entry> getSpeechesTopKKeyWordsForEachYear(String date) {
         Collection<Entry> results = new ArrayList<>(5000);
 
         String query = String.format(SELECT_SPEECH_K_KEYWORDS, date, NUMBER_OF_KEYWORDS);
@@ -214,9 +209,9 @@ public class KeyWordRepository {
              ResultSet resultSet = connection.prepareStatement(query).executeQuery()) {
             while(resultSet.next()) {
                 results.add(new Entry(date, resultSet.getString(MEMBER_NAME),
-                        resultSet.getString("KEYWORDS_SCORES"),
-                        resultSet.getInt("SPEECH_ID"),
-                        resultSet.getString("CONTENT"))
+                        resultSet.getString(KEYWORDS_SCORES),
+                        resultSet.getInt(SPEECH_ID),
+                        resultSet.getString(CONTENT))
                 );
             }
         } catch (SQLException e) {

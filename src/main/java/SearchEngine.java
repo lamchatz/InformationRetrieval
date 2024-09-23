@@ -1,3 +1,4 @@
+import config.Config;
 import database.SearchRepository;
 import dto.InfoToShow;
 import utility.Functions;
@@ -11,9 +12,10 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.stream.Collectors;
 
+import static utility.Functions.println;
+
 public class SearchEngine {
 
-    private static final int MAX_SIZE = 5;
     private static final String SINGLE_QUOTE = "'";
     private static final String WHITE_SPACE = "\\s";
 
@@ -51,22 +53,22 @@ public class SearchEngine {
 
     private void printAccordingToUserInput(Collection<InfoToShow> infos) {
         if (!infos.isEmpty()) {
-            Functions.println("Do you want to view the results?");
+            println("Do you want to view the results?");
             Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine();
             Iterator<InfoToShow> iterator = infos.iterator();
 
             while ("y".equalsIgnoreCase(input) && iterator.hasNext()) {
-                Functions.println(iterator.next());
+                println(iterator.next());
 
-                Functions.println("Continue? ");
+                println("Continue? ");
                 input = scanner.nextLine();
-                Functions.println("");
+                println("");
             }
 
             scanner.close();
         } else {
-            Functions.println("No matches found...");
+            println("No matches found...");
         }
     }
 
@@ -108,14 +110,13 @@ public class SearchEngine {
         List<Map.Entry<Integer, Double>> topK = accumulators.entrySet()
                 .stream()
                 .sorted(Map.Entry.<Integer, Double>comparingByValue().reversed())
-                .limit(MAX_SIZE)
+                .limit(Config.SEARCH_TOP_K)
                 .collect(Collectors.toList());
 
-        // Print or use the top-k results
         topK.forEach(entry -> {
             Integer speechId = entry.getKey();
             Double score = entry.getValue();
-            Functions.println("Speech ID: " + speechId + ", Score: " + score);
+            println("Speech ID: " + speechId + ", Score: " + score);
         });
 
         printAccordingToUserInput(searchRepository.getAllInfoFor(topK.stream()

@@ -3,6 +3,8 @@ package similarity;
 import java.util.Objects;
 
 public class Pair <T> {
+    private static final String HYPHEN = " - ";
+    private static final String COLON = ": ";
     private final T member1;
     private final T member2;
     private final Double similarity;
@@ -40,11 +42,6 @@ public class Pair <T> {
 
     @Override
     public String toString() {
-        final StringBuffer sb = new StringBuffer("Pair{");
-        sb.append("member1=").append(member1);
-        sb.append(", member2=").append(member2);
-        sb.append(", similarity=").append(similarity);
-        sb.append('}');
-        return sb.toString();
+        return member1 + HYPHEN + member2 + COLON + similarity;
     }
 }

@@ -64,7 +64,7 @@ public class MemberSimilarityRepository {
     }
 
     public Map<Integer, Map<String, Double>> getWordsForIds(List<Integer> memberIds) {
-        Map<Integer, Map<String, Double>> memberWords = new HashMap<>(1524);
+        Map<Integer, Map<String, Double>> memberWords = new HashMap<>(memberIds.size());
 
         if (!memberIds.isEmpty()) {
             try (Connection connection = DatabaseManager.connect();

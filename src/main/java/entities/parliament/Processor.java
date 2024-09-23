@@ -2,26 +2,21 @@ package entities.parliament;
 
 import database.PeriodRepository;
 
-import java.util.HashSet;
-import java.util.Set;
-
 public class Processor {
     private Period lastPeriod;
-    private final Set<String> periodNames;
+    private String lastPeriodName;
     private final PeriodRepository periodRepository;
 
     public Processor() {
         this.lastPeriod = new Period("");
-        this.periodNames = new HashSet<>(1);
-        this.periodNames.add("");
+        this.lastPeriodName = "";
 
         this.periodRepository = new PeriodRepository();
     }
 
     public void process(String periodName, String sessionName, String sittingName, String sittingDate) {
-        if (!periodNames.contains(periodName)) {
-            periodNames.clear();
-            periodNames.add(periodName);
+        if (!periodName.equals(lastPeriodName)) {
+            lastPeriodName = periodName;
 
             periodRepository.save(lastPeriod);
 

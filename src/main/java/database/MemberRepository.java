@@ -16,8 +16,8 @@ public class MemberRepository{
     private final Set<Member> batchMembers;
 
     public MemberRepository() {
-        this.batchMembers = new HashSet<>(1524);
-    } //based on members in the big dataset
+        this.batchMembers = new HashSet<>(1524); //based on members in the big dataset
+    }
 
     public void flushBatch() {
         executeBatch();
