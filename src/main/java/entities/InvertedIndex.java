@@ -73,14 +73,14 @@ public class InvertedIndex {
     private static final String REGEX = "[.!«¶»@#$%…^&*()_=+<>/?‘;'\",:\\[\\]\\t\\s-]";
 
     private final Map<String, Long> index;
-    private final Collection<TF> tfScores;
+    private final Collection<TfOfSpeech> tfOfSpeechScores;
 
     public InvertedIndex() {
         this.index = new HashMap<>();
-        this.tfScores = new ArrayList<>();
+        this.tfOfSpeechScores = new ArrayList<>();
     }
 
-    public void indexSpeech(Speech speech) {
+    public TfOfSpeech indexSpeech(Speech speech) {
         int size = 0;
         for (String word : speech.getText().toLowerCase().replaceAll(REGEX, SPACE).split(WHITESPACE)) {
             if (!COMMON_WORDS.contains(word) && word.length() > 2 && containsOnlyLetters(word)) {
@@ -90,19 +90,19 @@ public class InvertedIndex {
         }
 
         speech.setSize(size);
-        computeTFValues(speech);
+        return computeTFValues(speech);
     }
 
-    private void computeTFValues(Speech speech) {
-        TF tfOfSpeech = new TF(speech.getId(), speech.getSize());
+    private TfOfSpeech computeTFValues(Speech speech) {
+        TfOfSpeech tfOfSpeech = new TfOfSpeech(speech.getId(), speech.getSize());
         for (Map.Entry<String, Long> entry: index.entrySet()) {
             String word = entry.getKey();
 
             tfOfSpeech.calculate(word, index.get(word));
         }
 
-        tfScores.add(tfOfSpeech);
         index.clear();
+        return tfOfSpeech;
     }
 
     private boolean containsOnlyLetters(String word) {
@@ -114,8 +114,8 @@ public class InvertedIndex {
         return true;
     }
 
-    public Collection<TF> getTfScores() {
-        return tfScores;
+    public Collection<TfOfSpeech> getTfScores() {
+        return tfOfSpeechScores;
     }
 
     public void print() {

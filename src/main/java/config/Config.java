@@ -19,8 +19,7 @@ public class Config {
     public static final boolean FIND_SIMILARITIES_IN_BATCHES;
     public static final int SIMILARITY_BATCH;
     public static final int TOP_K_SIMILARITIES;
-    public static final String BIG;
-    public static final String NORMAL;
+    public static final String CSV_TO_READ;
     public static final String DB_URL;
 
     static {
@@ -41,11 +40,21 @@ public class Config {
             FIND_SIMILARITIES_IN_BATCHES = Boolean.parseBoolean(properties.getProperty(Property.FIND_SIMILARITIES_IN_BATCHES.name()));
             SIMILARITY_BATCH = Integer.parseInt(properties.getProperty(Property.SIMILARITY_BATCH.name()));
             TOP_K_SIMILARITIES = Integer.parseInt(properties.getProperty(Property.TOP_K_SIMILARITIES.name()));
-            BIG = properties.getProperty(Property.BIG_CSV_PATH.name());
-            NORMAL = properties.getProperty(Property.NORMAL_CSV_PATH.name());
+            CSV_TO_READ = determineCsvToRead(properties, properties.getProperty(Property.CSV_TO_READ.name()));
             DB_URL = properties.getProperty(Property.DB_URL.name());
+
+
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static String determineCsvToRead(Properties properties, String property) {
+        if ("big".equalsIgnoreCase(property)) {
+            return properties.getProperty(Property.BIG_CSV_PATH.name());
+
+        } else {
+            return properties.getProperty(Property.NORMAL_CSV_PATH.name());
         }
     }
 }

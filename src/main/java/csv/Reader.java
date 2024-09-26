@@ -1,12 +1,8 @@
 package csv;
 
 import config.Config;
-import database.InvertedIndexRepository;
-import database.MemberRepository;
+import database.BatchManager;
 import database.PoliticalPartyMembersRepository;
-import database.PoliticalPartyRepository;
-import database.SpeechRepository;
-import entities.Government;
 import entities.InvertedIndex;
 import entities.Member;
 import entities.PoliticalParty;
@@ -46,39 +42,38 @@ public class Reader {
 
     public static void read() {
         final InvertedIndex invertedIndex = new InvertedIndex();
-        final Set<Government> governments = new HashSet<>();
-        final Set<PoliticalPartyMemberRelation> politicalPartyMemberRelations = new HashSet<>();
-        final Map<String, Integer> politicalParties = new HashMap<>();
-        final Map<String, Integer> members = new HashMap<>(1524);
         final Processor parliamentProcessor = new Processor();
 
-        final InvertedIndexRepository invertedIndexRepository = new InvertedIndexRepository();
-        final MemberRepository memberRepository = new MemberRepository();
-        final PoliticalPartyRepository politicalPartyRepository = new PoliticalPartyRepository();
-        final SpeechRepository speechRepository = new SpeechRepository();
-        final PoliticalPartyMembersRepository politicalPartyMembersRepository = new PoliticalPartyMembersRepository();
+        final Set<PoliticalPartyMemberRelation> politicalPartyMemberRelations = new HashSet<>(5000); //an approximation to avoid constant resizing
+        final Map<String, Integer> politicalParties = new HashMap<>(32); //based on the number of political parties in the big dataset
+        final Map<String, Integer> members = new HashMap<>(1524); //based on the number of members in the big dataset
 
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.NORMAL))) {
+        final PoliticalPartyMembersRepository politicalPartyMembersRepository = new PoliticalPartyMembersRepository();
+        final BatchManager batchManager = new BatchManager();
+
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.CSV_TO_READ))) {
             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader(HEADER).withFirstRecordAsHeader());
 
             long counter = 0;
             for (CSVRecord csvRecord : csvParser) {
+                counter++;
+
                 String name = csvRecord.get(MEMBER_NAME);
 
                 if (name == null || name.isBlank()) {
                     name = ANONYMOUS;
                 }
 
-                counter++;
-
+                //Map of political party names to their id, used for proper mapping and ensuring no duplicates
                 String politicalPartyName = csvRecord.get(POLITICAL_PARTY);
                 if (!politicalParties.containsKey(politicalPartyName)) {
                     PoliticalParty politicalParty = new PoliticalParty(politicalPartyName);
 
-                    politicalPartyRepository.addToBatch(politicalParty);
+                    batchManager.addToBatch(politicalParty);
                     politicalParties.put(politicalPartyName, politicalParty.getId());
                 }
 
+                //Map of member names to their id, used for proper mapping and ensuring no duplicates
                 if (!members.containsKey(name)) {
                     Member member = Member.with().name(name)
                             .politicalPartyId(politicalParties.get(politicalPartyName))
@@ -87,7 +82,7 @@ public class Reader {
                             .gender(csvRecord.get(MEMBER_GENDER))
                             .create();
 
-                    memberRepository.addToBatch(member);
+                    batchManager.addToBatch(member);
                     members.put(name, member.getId());
                 }
 
@@ -110,37 +105,28 @@ public class Reader {
                         sittingName,
                         sittingDate);
 
-                //governments.add(Government.processGovernment(csvRecord.get(GOVERNMENT)));
-
                 final Speech speech = new Speech(members.get(name),
                         csvRecord.get(SPEECH),
                         parliamentProcessor.getSittingId(sessionName, sittingName)
                 );
 
-                invertedIndex.indexSpeech(speech);
-                speechRepository.addToBatch(speech);
+                batchManager.addToBatch(invertedIndex.indexSpeech(speech));
+                batchManager.addToBatch(speech);
 
                 if (counter == EXECUTE_BATCH_AFTER) {
                     println(csvRecord.getRecordNumber());
                     counter = 0;
-                    invertedIndexRepository.save(invertedIndex);
+
+                    println("Flushing batches");
+                    batchManager.flushBatches();
                 }
             }
 
             println("Flushing parliament records...");
             parliamentProcessor.flush();
 
-            println("Flushing speech records...");
-            speechRepository.flushBatch();
-
-            println("Flushing politicalParty records...");
-            politicalPartyRepository.flushBatch();
-
-            println("Flushing member records...");
-            memberRepository.flushBatch();
-
-            println("Saving invertedIndex...");
-            invertedIndexRepository.save(invertedIndex);
+            println("Flushing batches");
+            batchManager.flushBatches();
 
         } catch (IOException e) {
             e.printStackTrace();

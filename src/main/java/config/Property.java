@@ -17,5 +17,6 @@ public enum Property {
     BIG_CSV_PATH,
     TEST_CSV_PATH,
     NORMAL_CSV_PATH,
+    CSV_TO_READ,
     DB_URL
 }

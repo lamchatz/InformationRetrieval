@@ -161,7 +161,7 @@ public class DatabaseManager {
         try (Connection connection = connect();
              Statement statement = connection.createStatement()) {
             statement.execute("PRAGMA SYNCHRONOUS = OFF;");
-
+            connection.setAutoCommit(false);
 
             println("Calculating IDF*TF table");
             statement.execute(String.format(CREATE_IDF_TF_TABLE, SpeechRepository.TOTAL_SPEECHES));
@@ -171,9 +171,10 @@ public class DatabaseManager {
 
             println("Creating IDF_TF speech_id index.");
             statement.execute(CREATE_IDF_TF_SPEECH_ID_INDEX);
+
+            connection.commit();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
 }
