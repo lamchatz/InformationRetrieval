@@ -1,6 +1,8 @@
 package keyword;
 
+import config.Config;
 import database.KeyWordRepository;
+import utility.Directory;
 import utility.FileManager;
 
 import java.util.Collection;
@@ -16,14 +18,30 @@ public class Extractor {
     public Extractor() {
         this.keyWordRepository = new KeyWordRepository();
         this.DATES = getDates();
-        FileManager.clearKeywordsDirectory();
-        FileManager.createKeyWordsDirectory();
-        FileManager.createMembersSubDirectory();
-        FileManager.createPoliticalPartiesSubDirectory();
-        FileManager.createSpeechesSubDirectory();
+        FileManager.clearDirectory(Directory.KEYWORDS);
+
+        FileManager.createDirectory(Directory.KEYWORDS);
+        FileManager.createDirectory(Directory.MEMBERS);
+        FileManager.createDirectory(Directory.POLITICAL_PARTIES);
+        FileManager.createDirectory(Directory.SPEECHES);
     }
 
-    public void extractMemberKeyWords() {
+    public void extract() {
+        if (Config.EXTRACT_MEMBER_KEY_WORDS) {
+            println("Extracting Member keywords...");
+            extractMemberKeyWords();
+        }
+        if (Config.EXTRACT_POLITICAL_PARTY_KEY_WORDS) {
+            println("Extracting Political Party keywords...");
+            extractKeyWordsForPoliticalParties();
+        }
+        if (Config.EXTRACT_SPEECH_KEY_WORDS) {
+            println("Extracting Speech keywords...");
+            extractKeyWordsForSpeeches();
+        }
+    }
+
+    private void extractMemberKeyWords() {
         final Map<String, Entry> memberHighestScore = new HashMap<>(1524); //number of members in the big dataset
 
         for (String date : DATES) {
@@ -38,7 +56,7 @@ public class Extractor {
         memberHighestScore.values().forEach(FileManager::writeMemberHighestScore);
     }
 
-    public void extractKeyWordsForPoliticalParties() {
+    private void extractKeyWordsForPoliticalParties() {
         final Map<String, Entry> politicalPartyHighestScore = new HashMap<>(32); //number of political parties in the big dataset
 
         for (String date : DATES) {
@@ -53,7 +71,7 @@ public class Extractor {
         politicalPartyHighestScore.values().forEach(FileManager::writePoliticalPartyHighestScore);
     }
 
-    public void extractKeyWordsForSpeeches() {
+    private void extractKeyWordsForSpeeches() {
         for (String date : DATES) {
             println("searched year: " + date + " for speeches");
             Collection<Entry> keyWordForSpeech = keyWordRepository.getKeyWordForSpeech(date);

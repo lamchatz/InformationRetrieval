@@ -75,7 +75,7 @@ public class KeyWordRepository {
                     "JOIN SPEECH ON SPEECH.ID = IDF_TF.SPEECH_ID " +
                     "JOIN MEMBER ON MEMBER.ID = SPEECH.MEMBER_ID " +
                     "JOIN SITTING ON SITTING.ID = SPEECH.SITTING_ID " +
-                "WHERE SITTING.DATE LIKE '%%%s' " +
+                "WHERE SITTING.DATE LIKE '%s%%' " +
             ") " +
             "WHERE RN <= %d " +
             "GROUP BY SPEECH_ID, MEMBER_NAME, CONTENT " +

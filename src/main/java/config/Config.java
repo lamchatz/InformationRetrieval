@@ -19,6 +19,11 @@ public class Config {
     public static final boolean FIND_SIMILARITIES_IN_BATCHES;
     public static final int SIMILARITY_BATCH;
     public static final int TOP_K_SIMILARITIES;
+    public static final  boolean PERFORM_CLUSTERING;
+    public static final int K_CLUSTERS;
+    public static final int MAX_ITERATIONS;
+    public static final  boolean SHOW_ONLY_SPEECH_IDS;
+
     public static final String CSV_TO_READ;
     public static final String DB_URL;
 
@@ -40,6 +45,10 @@ public class Config {
             FIND_SIMILARITIES_IN_BATCHES = Boolean.parseBoolean(properties.getProperty(Property.FIND_SIMILARITIES_IN_BATCHES.name()));
             SIMILARITY_BATCH = Integer.parseInt(properties.getProperty(Property.SIMILARITY_BATCH.name()));
             TOP_K_SIMILARITIES = Integer.parseInt(properties.getProperty(Property.TOP_K_SIMILARITIES.name()));
+            PERFORM_CLUSTERING = Boolean.parseBoolean(properties.getProperty(Property.PERFORM_CLUSTERING.name()));
+            K_CLUSTERS = Integer.parseInt(properties.getProperty(Property.K_CLUSTERS.name()));
+            MAX_ITERATIONS = Integer.parseInt(properties.getProperty(Property.MAX_ITERATIONS.name()));
+            SHOW_ONLY_SPEECH_IDS = Boolean.parseBoolean(properties.getProperty(Property.SHOW_ONLY_SPEECH_IDS.name()));
             CSV_TO_READ = determineCsvToRead(properties, properties.getProperty(Property.CSV_TO_READ.name()));
             DB_URL = properties.getProperty(Property.DB_URL.name());
 

@@ -1,3 +1,4 @@
+import clusters.KMeans;
 import config.Config;
 import csv.Reader;
 import database.DatabaseManager;
@@ -25,30 +26,17 @@ public class Main {
 
         if (Config.EXTRACT_KEY_WORDS) {
             Extractor extractor = new Extractor();
-            if (Config.EXTRACT_MEMBER_KEY_WORDS) {
-                println("Extracting Member keywords...");
-                extractor.extractMemberKeyWords();
-            }
-            if (Config.EXTRACT_POLITICAL_PARTY_KEY_WORDS) {
-                println("Extracting Political Party keywords...");
-                extractor.extractKeyWordsForPoliticalParties();
-            }
-            if (Config.EXTRACT_SPEECH_KEY_WORDS) {
-                println("Extracting Speech keywords...");
-                extractor.extractKeyWordsForSpeeches();
-            }
+            extractor.extract();
         }
 
         if (Config.FIND_SIMILARITIES) {
             Calculator calculator = new Calculator();
-
-            if (Config.FIND_SIMILARITIES_IN_BATCHES) {
-                //calculator.calculateInBatches();
-            } else {
-                calculator.calculate();
-            }
+            calculator.calculate();
         }
 
-        //new ClustersRepository().getSpeechVectors();
+        if (Config.PERFORM_CLUSTERING) {
+            KMeans kMeans = new KMeans();
+            kMeans.compute();
+        }
     }
 }

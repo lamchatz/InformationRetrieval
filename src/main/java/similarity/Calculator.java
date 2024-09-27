@@ -2,6 +2,8 @@ package similarity;
 
 import config.Config;
 import database.MemberSimilarityRepository;
+import utility.CosineSimilarity;
+import utility.Directory;
 import utility.FileManager;
 
 import java.util.ArrayDeque;
@@ -41,16 +43,26 @@ public class Calculator {
 
         topKSimilarities = new PriorityQueue<>(Comparator.comparingDouble(Pair::getSimilarity));
 
-        FileManager.clearSimilaritiesDirectory();
-        FileManager.createSimilaritiesSubDirectory();
+        FileManager.clearDirectory(Directory.SIMILARITIES);
+        FileManager.createDirectory(Directory.SIMILARITIES);
     }
 
     public void calculate() {
+        if (Config.FIND_SIMILARITIES_IN_BATCHES) {
+            println("Calculating similarities in batches...");
+            calculateInBatches();
+        } else {
+            println("Calculating similarities...");
+            calculateInOneGo();
+        }
+    }
+
+    public void calculateInOneGo() {
         topKSimilarities.clear();
         
         Map<Integer, Map<String, Double>> membersWords = memberSimilarityRepository.getAllMemberWords();
         membersWords.forEach((memberId, entries) -> {
-            membersNorm.put(memberId, norm(entries));
+            membersNorm.put(memberId, CosineSimilarity.norm(entries));
         });
 
         Set<Integer> members = new HashSet<>(membersWords.keySet());
@@ -106,7 +118,6 @@ public class Calculator {
         getTopSimilarities();
     }
 
-
     private void compareWithMember(Integer id, Map<String, Double> originalMemberWordsAndScores, Map<Integer, Map<String, Double>> memberWordsAndScore) {
         Set<Integer> calculatedSimilarities = calculatedMemberSimilarities.get(id);
 
@@ -138,19 +149,15 @@ public class Calculator {
     }
 
     private double cosineSimilarity(Integer id, Map<String, Double> values, Map.Entry<Integer, Map<String, Double>> other) {
-        double d1 = membersNorm.computeIfAbsent(id, key -> norm(values));
-        double d2 = membersNorm.computeIfAbsent(other.getKey(), key -> norm(other.getValue()));
+        double d1 = membersNorm.computeIfAbsent(id, key -> CosineSimilarity.norm(values));
+        double d2 = membersNorm.computeIfAbsent(other.getKey(), key -> CosineSimilarity.norm(other.getValue()));
 
         // Compute similarity
-        if (d1 <= 0.0 || d2 <= 0.0) {
-            return -1;
-        }
-        double dotProduct = dotProduct(values, other.getValue());
-        if (dotProduct == 0) {
-            return -1;
-        }
-
-        return dotProduct / (d1 * d2);
+        return CosineSimilarity.calculate(
+                CosineSimilarity.dotProduct(values, other.getValue()),
+                d1,
+                d2
+        );
     }
 
     private List<Integer> iterateListAndGetIdsWithNoCalculatedSimilarity(Set<Integer> calculatedSimilarities, int from) {
@@ -186,37 +193,11 @@ public class Calculator {
         FileManager.writeSimilarities(queue);
     }
 
-    private Set<String> commonWords(Map<String, Double> a, Map<String, Double> b) {
-        final Set<String> commonWords = new HashSet<>(a.keySet());
-        commonWords.retainAll(b.keySet());
-        return commonWords;
-    }
-
     private void initializeCalculatedSimilarities() {
         memberIds.forEach(id -> {
             Set<Integer> set = new HashSet<>(NUMBER_OF_MEMBER_IDS);
             set.add(id);  // Add the id itself to its own set
             calculatedMemberSimilarities.put(id, set);
         });
-    }
-
-    private double dotProduct(Map<String, Double> a, Map<String, Double> b) {
-        double dot = 0.0;
-
-        Set<String> commonWords = commonWords(a, b);
-        for (String word : commonWords) {
-            dot += a.get(word) * b.get(word);
-        }
-
-        return dot;
-    }
-
-    private double norm(Map<String, Double> entries) {
-        double d = 0.0;
-        for (Map.Entry<String, Double> entry : entries.entrySet()) {
-            d += Math.pow(entry.getValue(), 2);
-        }
-
-        return Math.sqrt(d);
     }
 }

@@ -1,18 +1,26 @@
 package database;
 
 import entities.Speech;
+import utility.Functions;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 import static utility.Functions.println;
 
 public class SpeechRepository {
 
     public static long TOTAL_SPEECHES = 0;
-    protected static final String INSERT_INTO_SPEECH = "INSERT INTO SPEECH(ID, CONTENT, MEMBER_ID, SITTING_ID, TOTAL_WORDS) VALUES (?, ?, ?, ?, ?)";
+    private static final String INSERT_INTO_SPEECH = "INSERT INTO SPEECH(ID, CONTENT, MEMBER_ID, SITTING_ID, TOTAL_WORDS) VALUES (?, ?, ?, ?, ?)";
+    private static final String SELECT_CONTENTS_BY_IDS = "SELECT ID, CONTENT FROM SPEECH WHERE ID IN ";
+    private static final String ID = "ID";
+    private static final String CONTENT = "CONTENT";
 
     public SpeechRepository() {
         super();
@@ -44,5 +52,22 @@ public class SpeechRepository {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public Map<Integer, String> findByIds(Set<Integer> ids) {
+        Map<Integer, String> speeches = new HashMap<>(ids.size());
+
+        try (Connection connection = DatabaseManager.connect();
+             ResultSet resultSet = connection.prepareStatement(SELECT_CONTENTS_BY_IDS + Functions.generateInClauseFor(ids)).executeQuery()) {
+
+            while (resultSet.next()) {
+                speeches.put(resultSet.getInt(ID), resultSet.getString(CONTENT));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return speeches;
     }
 }

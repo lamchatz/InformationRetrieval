@@ -1,33 +1,36 @@
 package database;
 
-import utility.Functions;
+import clusters.MinMax;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class ClustersRepository {
 
     private static final String SELECT_SPEECH_VECTORS = "SELECT SPEECH_ID, WORD, SCORE FROM IDF_TF";
-    private static final String SELECT_DISTINCT_WORDS = "SELECT DISTINCT WORD FROM IDF_TF ORDER BY WORD";
+    private static final String SELECT_DISTINCT_WORDS_WITH_MIN_MAX_VALUES = "SELECT WORD, MIN(SCORE) AS MIN, MAX(SCORE) AS MAX " +
+            "FROM IDF_TF " +
+            "GROUP BY WORD " +
+            "ORDER BY WORD";
     private static final String WORD = "WORD";
+    private static final String MIN = "MIN";
+    private static final String MAX = "MAX";
 
     //private final List<String> vocabulary;
     public ClustersRepository() {
-      //  this.vocabulary = getVocabulary();
+        super();
     }
 
-    private List<String> getVocabulary() {
-        List<String> vocabulary = new ArrayList<>();
+    public Map<String, MinMax> getVocabulary() {
+        Map<String, MinMax> vocabulary = new HashMap<>();
 
         try (Connection connection = DatabaseManager.connect();
-        ResultSet resultSet = connection.prepareStatement(SELECT_DISTINCT_WORDS).executeQuery()) {
+        ResultSet resultSet = connection.prepareStatement(SELECT_DISTINCT_WORDS_WITH_MIN_MAX_VALUES).executeQuery()) {
             while (resultSet.next()) {
-                vocabulary.add(resultSet.getString(WORD));
+                vocabulary.put(resultSet.getString(WORD), new MinMax(resultSet.getDouble(MIN), resultSet.getDouble(MAX)));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -39,39 +42,23 @@ public class ClustersRepository {
     public Map<Integer, Map<String, Double>> getSpeechVectors() {
         Map<Integer, Map<String, Double>> speechVectors = new HashMap<>();
 
-        long c = 0;
         try (Connection connection = DatabaseManager.connect();
              ResultSet resultSet = connection.prepareStatement(SELECT_SPEECH_VECTORS).executeQuery()) {
             while (resultSet.next()) {
-                c++;
+
                 //50_709_333
                 //55576352
                 //62_590_726
-//                Integer speechId = resultSet.getInt("SPEECH_ID");
-//                String word = resultSet.getString("WORD");
-//                double score = resultSet.getDouble("SCORE");
-//
-//                speechVectors.computeIfAbsent(speechId, k -> new HashMap<>()).put(word, score);
+                Integer speechId = resultSet.getInt("SPEECH_ID");
+                String word = resultSet.getString("WORD");
+                Double score = resultSet.getDouble("SCORE");
+
+                speechVectors.computeIfAbsent(speechId, k -> new HashMap<>()).put(word, score);
             }
-
-            Functions.println(c);
-
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
         return speechVectors;
-    }
-
-    public void s() {
-        try (Connection connection = DatabaseManager.connect();
-        ResultSet resultSet = connection.prepareStatement("SELECT WORD, IDF FROM (SELECT (TOTAL_SPEECHES / (FREQUENCY * 1.0)) AS IDF, WORD " +
-                "FROM WORD_FREQUENCY, (SELECT COUNT(ID) AS TOTAL_SPEECHES FROM SPEECH )) ORDER BY IDF ASC LIMIT 2000" ).executeQuery()) {
-            while (resultSet.next()) {
-                Functions.println(resultSet.getString(WORD) + ": " + resultSet.getDouble("IDF") );
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
     }
 }

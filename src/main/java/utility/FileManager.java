@@ -9,26 +9,14 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 
 public class FileManager {
-    private static final String WORKING_DIR = System.getProperty("user.dir");
     private static final String TXT = ".txt";
-    private static final String KEYWORDS_DIR = WORKING_DIR + "/keywords";
-    private static final String MEMBERS_DIR = KEYWORDS_DIR + "/members";
-    private static final String POLITICAL_PARTIES_DIR = KEYWORDS_DIR + "/politicalParties";
-    private static final String SPEECHES_DIR = KEYWORDS_DIR + "/speeches";
-    private static final String SIMILARITIES_DIR = WORKING_DIR + "/similarities";
-    private static final Path KEYWORDS_DIR_PATH = Paths.get(KEYWORDS_DIR);
-    private static final Path MEMBER_DIR_PATH = Paths.get(MEMBERS_DIR);
-    private static final Path POLITICAL_PARTIES_DIR_PATH = Paths.get(POLITICAL_PARTIES_DIR);
-    private static final Path SPEECHES_DIR_PATH = Paths.get(SPEECHES_DIR);
-    private static final Path SIMILARITIES_DIR_PATH = Paths.get(SIMILARITIES_DIR);
     private static final String ID = "ID: ";
     private static final String NAME = ", Name: ";
     private static final String WORD_SCORE = ", Word - Score: ";
@@ -37,32 +25,49 @@ public class FileManager {
     private static final String HIGHEST_SCORE_WORD = "\nHighest score word = ";
     private static final String COLON = ": ";
     private static final int NUMBER_OF_KEY_WORDS = Config.NUMBER_OF_KEY_WORDS;
+    private static final String TOP = ", Top ";
+    private static final String WORD_SCORES = " Word Scores: {";
+    private static final String CURLY_BRACE = "}";
+    private static final String SIMILARITIES = "similarities";
+    private static final String CLUSTERS = "clusters";
+    private static final String LINE_BREAK = "\n";
+    private static final String FAILED_TO_WRITE_TO_FILE = "Failed to write to file: ";
+    private static final String FAILED_TO_CREATE_DIRECTORY = "Failed to create directory: ";
 
     public FileManager() {
         super();
     }
 
+    //Keywords
     public static void writeMemberKeyWords(Entry entry) {
-        writeValuesToFile(MEMBER_DIR_PATH, entry.getName(), format(entry));
+        writeValuesToFile(Directory.MEMBERS, entry.getName(), format(entry));
     }
 
     public static void writePoliticalPartyKeyWords(Entry entry) {
-        writeValuesToFile(POLITICAL_PARTIES_DIR_PATH, entry.getName(), format(entry));
+        writeValuesToFile(Directory.POLITICAL_PARTIES, entry.getName(), format(entry));
     }
 
     public static void writeSpeechScores(Entry entry) {
-        writeValuesToFile(SPEECHES_DIR_PATH, entry.getDate(), formatSpeeches(entry));
+        writeValuesToFile(Directory.SPEECHES, entry.getDate(), formatSpeeches(entry));
+    }
+
+    public static void writeMemberHighestScore(Entry entry) {
+        writeHighestScore(Directory.MEMBERS, entry);
+    }
+
+    public static void writePoliticalPartyHighestScore(Entry entry) {
+        writeHighestScore(Directory.POLITICAL_PARTIES, entry);
     }
 
     private static String format(Entry entry) {
-            return entry.getDate() + COLON + entry.getKeyWord() + HYPHEN + entry.getScore();
+        return entry.getDate() + COLON + entry.getKeyWord() + HYPHEN + entry.getScore();
     }
 
     private static String formatSpeeches(Entry entry) {
         if (NUMBER_OF_KEY_WORDS > 1) {
             return ID + entry.getSpeechId() +
                     NAME + entry.getName() +
-                    ", Top " + NUMBER_OF_KEY_WORDS + " Word Scores: {" + entry.getKeyWordScores() + "}" +
+                    TOP + NUMBER_OF_KEY_WORDS + WORD_SCORES + entry.getKeyWordScores() + CURLY_BRACE +
                     CONTENT + entry.getContent();
         }
 
@@ -72,107 +77,99 @@ public class FileManager {
                 CONTENT + entry.getContent();
     }
 
+    private static String formatHighestScore(Entry entry) {
+        return HIGHEST_SCORE_WORD + entry.getKeyWord() + HYPHEN + entry.getScore();
+    }
+
+    //Similarities
+
     public static void writeSimilarities(Deque<Pair<String>> queue) {
-        writeValuesToFile(SIMILARITIES_DIR_PATH, "similarities", formatSimilarities(queue));
+        writeValuesToFile(Directory.SIMILARITIES, SIMILARITIES, formatSimilarities(queue));
     }
 
     private static String formatSimilarities(Deque<Pair<String>> queue) {
-        List<String> values = new ArrayList<>();
+        List<String> values = new ArrayList<>(queue.size());
 
         queue.forEach(pair -> values.add(pair.toString()));
 
-        return String.join("\n", values);
+        return String.join(LINE_BREAK, values);
     }
 
-    private static void writeValuesToFile(Path path, String fileName, String values) {
-        Path filePath = path.resolve(fileName + TXT);
+
+    //CLUSTERS
+
+    public static <T> void writeClusters(Map<Integer, List<T>> clusters) {
+        writeValuesToFile(Directory.CLUSTERS, CLUSTERS, formatClusters(clusters));
+    }
+
+    private static <T> String formatClusters(Map<Integer, List<T>> clusters) {
+        List<String> values = new ArrayList<>(clusters.size());
+
+        for (Map.Entry<Integer, List<T>> cluster : clusters.entrySet()) {
+            values.add(formatCluster(cluster));
+        }
+
+        return String.join(LINE_BREAK, values);
+    }
+
+    private static <T> String formatCluster(Map.Entry<Integer, List<T>> cluster) {
+        return cluster.getKey() + COLON + cluster.getValue(); //if T = Speech, Speech.toString() is called
+    }
+
+    //WRITE
+
+    private static void writeValuesToFile(Directory directory, String fileName, String values) {
+        Path filePath = directory.getPath().resolve(fileName + TXT);
 
         try (BufferedWriter writer = Files.newBufferedWriter(filePath, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
             writer.write(values);
             writer.newLine();
         } catch (IOException e) {
-            System.out.println("Failed to write to file: " + filePath);
+            System.out.println(FAILED_TO_WRITE_TO_FILE + filePath);
         }
     }
 
-    public static void writeMemberHighestScore(Entry entry) {
-        writeHighestScore(MEMBER_DIR_PATH, entry);
-    }
-
-    public static void writePoliticalPartyHighestScore(Entry entry) {
-        writeHighestScore(POLITICAL_PARTIES_DIR_PATH, entry);
-    }
-
-    private static void writeHighestScore(Path path, Entry entry) {
-        Path filePath = path.resolve(entry.getName() + TXT);
+    private static void writeHighestScore(Directory directory, Entry entry) {
+        Path filePath = directory.getPath().resolve(entry.getName() + TXT);
 
         try (BufferedWriter writer = Files.newBufferedWriter(filePath, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
             writer.write(formatHighestScore(entry));
             writer.newLine();
         } catch (IOException e) {
-            System.out.println("Failed to write to file: " + filePath);
+            System.out.println(FAILED_TO_WRITE_TO_FILE + filePath);
         }
     }
 
-    private static String formatHighestScore(Entry entry) {
-        return HIGHEST_SCORE_WORD + entry.getKeyWord() + HYPHEN + entry.getScore();
-    }
 
-    public static void createKeyWordsDirectory() {
+    public static void createDirectory(Directory directory) {
         try {
-            Files.createDirectories(KEYWORDS_DIR_PATH);
+            Files.createDirectories(directory.getPath());
         } catch (IOException e) {
-            System.out.println("Failed to create directory: " + e.getMessage());
+            System.out.println(FAILED_TO_CREATE_DIRECTORY + e.getMessage());
         }
     }
 
-    public static void createMembersSubDirectory() {
-        try {
-            Files.createDirectories(MEMBER_DIR_PATH);
-        } catch (IOException e) {
-            System.out.println("Failed to create directory: " + e.getMessage());
-        }
-    }
+    //DELETE
 
-    public static void createPoliticalPartiesSubDirectory() {
-        try {
-            Files.createDirectories(POLITICAL_PARTIES_DIR_PATH);
-        } catch (IOException e) {
-            System.out.println("Failed to create directory: " + e.getMessage());
-        }
-    }
-
-    public static void createSpeechesSubDirectory() {
-        try {
-            Files.createDirectories(SPEECHES_DIR_PATH);
-        } catch (IOException e) {
-            System.out.println("Failed to create directory: " + e.getMessage());
-        }
-    }
-
-    public static void createSimilaritiesSubDirectory() {
-        try {
-            Files.createDirectories(SIMILARITIES_DIR_PATH);
-        } catch (IOException e) {
-            System.out.println("Failed to create directory: " + e.getMessage());
-        }
-    }
-
-    public static void clearKeywordsDirectory() {
-        deleteFile(new File(KEYWORDS_DIR));
+    public static void clearDirectory(Directory directory) {
+        deleteFile(new File(directory.getPathString()));
     }
 
     private static void deleteFile(File file) {
-        for (File subfile : Objects.requireNonNull(file.listFiles())) {
-            if (subfile.isDirectory()) {
-                deleteFile(subfile);
+        //Recursive function that deletes all files in a directory and then the directory
+        if (file != null) {
+
+            File[] files = file.listFiles();
+            if (files != null) {
+                for (File subfile : files) {
+                    if (subfile.isDirectory()) {
+                        deleteFile(subfile);
+                    }
+
+                    subfile.delete();
+                }
             }
-
-            subfile.delete();
         }
-    }
 
-    public static void clearSimilaritiesDirectory() {
-        deleteFile(new File(SIMILARITIES_DIR));
     }
 }
