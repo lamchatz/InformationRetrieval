@@ -41,18 +41,18 @@ public class Reader {
     private static final String ANONYMOUS = "Anonymous";
 
     public static void read() {
-        final InvertedIndex invertedIndex = new InvertedIndex();
-        final Processor parliamentProcessor = new Processor();
-
-        final Set<PoliticalPartyMemberRelation> politicalPartyMemberRelations = new HashSet<>(5000); //an approximation to avoid constant resizing
-        final Map<String, Integer> politicalParties = new HashMap<>(32); //based on the number of political parties in the big dataset
-        final Map<String, Integer> members = new HashMap<>(1524); //based on the number of members in the big dataset
-
-        final PoliticalPartyMembersRepository politicalPartyMembersRepository = new PoliticalPartyMembersRepository();
-        final BatchManager batchManager = new BatchManager();
-
         try (BufferedReader reader = Files.newBufferedReader(Paths.get(Config.CSV_TO_READ))) {
             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader(HEADER).withFirstRecordAsHeader());
+
+            final InvertedIndex invertedIndex = new InvertedIndex();
+            final Processor parliamentProcessor = new Processor();
+
+            final Set<PoliticalPartyMemberRelation> politicalPartyMemberRelations = new HashSet<>(5000); //an approximation to avoid constant resizing
+            final Map<String, Integer> politicalParties = new HashMap<>(32); //based on the number of political parties in the big dataset
+            final Map<String, Integer> members = new HashMap<>(1524); //based on the number of members in the big dataset
+
+            final PoliticalPartyMembersRepository politicalPartyMembersRepository = new PoliticalPartyMembersRepository();
+            final BatchManager batchManager = new BatchManager();
 
             long counter = 0;
             for (CSVRecord csvRecord : csvParser) {

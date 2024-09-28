@@ -1,6 +1,7 @@
 import config.Config;
 import database.SearchRepository;
 import dto.InfoToShow;
+import entities.InvertedIndex;
 import utility.Functions;
 
 import java.util.ArrayList;
@@ -32,9 +33,9 @@ public class SearchEngine {
 
         if (args.length > 0) {
             String question = args[0];
-            Map<Integer, Double> accumulators = new HashMap<>(300_000);
+            Map<Integer, Double> accumulators = new HashMap<>(100_000);//arbitrary big number to avoid constant resizing
 
-            String[] words = question.toLowerCase().split(WHITE_SPACE);
+            String[] words = question.toLowerCase().replace(InvertedIndex.REGEX, " ").split(WHITE_SPACE);
             List<String> accentWords = new ArrayList<>(words.length);
             for (String searchWord : words) {
                 if (Functions.hasAccent(searchWord)) {
@@ -85,14 +86,15 @@ public class SearchEngine {
         Map<String, Map<Integer, Double>> idfTfOfSpeechesForWords = searchRepository.selectIdfTfValuesForWordWithoutAccent(searchWord, args);
 
         if (!idfTfOfSpeechesForWords.isEmpty()) {
-            Map<Integer, Double> highestScores = idfTfOfSpeechesForWords.values().stream()
+            //If a speech id is associated with more than one word, keep the highest score
+            Map<Integer, Double> highestScoreForEachSpeechId = idfTfOfSpeechesForWords.values().stream()
                     .flatMap(wordScores -> wordScores.entrySet().stream())
                     .collect(Collectors.toMap(
                             Map.Entry::getKey,
                             Map.Entry::getValue,
                             Double::max));
 
-            highestScores.forEach((speechId, sum) -> searchAccumulators.merge(speechId, sum, Double::sum));
+            highestScoreForEachSpeechId.forEach((speechId, sum) -> searchAccumulators.merge(speechId, sum, Double::sum));
         }
     }
 
@@ -103,7 +105,6 @@ public class SearchEngine {
             double length = speechTotalWords.getOrDefault(speechId, 1); // Avoid division by zero
             return score / length;
         });
-
     }
 
     private void getTopSpeeches(Map<Integer, Double> accumulators) {

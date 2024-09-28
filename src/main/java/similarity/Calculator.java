@@ -39,7 +39,7 @@ public class Calculator {
         this.NUMBER_OF_MEMBER_IDS = memberIds.size();
         this.calculatedMemberSimilarities = new HashMap<>(NUMBER_OF_MEMBER_IDS);
         this.membersNorm = new HashMap<>(NUMBER_OF_MEMBER_IDS);
-        this.blackList = new HashSet<>(NUMBER_OF_MEMBER_IDS / 10);
+        this.blackList = new HashSet<>((NUMBER_OF_MEMBER_IDS / 10) + 1);
 
         topKSimilarities = new PriorityQueue<>(Comparator.comparingDouble(Pair::getSimilarity));
 
@@ -60,18 +60,19 @@ public class Calculator {
     public void calculateInOneGo() {
         topKSimilarities.clear();
         
-        Map<Integer, Map<String, Double>> membersWords = memberSimilarityRepository.getAllMemberWords();
-        membersWords.forEach((memberId, entries) -> {
+        Map<Integer, Map<String, Double>> wordsAndScoresForMembers = memberSimilarityRepository.getAllMemberWords();
+        wordsAndScoresForMembers.forEach((memberId, entries) -> {
             membersNorm.put(memberId, CosineSimilarity.norm(entries));
         });
 
-        Set<Integer> members = new HashSet<>(membersWords.keySet());
+        Set<Integer> memberIds = new HashSet<>(wordsAndScoresForMembers.keySet());
 
-        for (Integer memberId : members) {
-            Map<String, Double> values = membersWords.remove(memberId);
+        for (Integer memberId : memberIds) {
+            Map<String, Double> memberValues = wordsAndScoresForMembers.remove(memberId);
+            //remove this entry to avoid comparing it with itself, also slowly reduce the size of the dataset
 
-            for (Map.Entry<Integer, Map<String, Double>> entry : membersWords.entrySet()) {
-                topKSimilarities.offer(new Pair<>(memberId, entry.getKey(), cosineSimilarity(memberId, values, entry)));
+            for (Map.Entry<Integer, Map<String, Double>> wordsAndScoresForMemberEntry : wordsAndScoresForMembers.entrySet()) {
+                topKSimilarities.offer(new Pair<>(memberId, wordsAndScoresForMemberEntry.getKey(), cosineSimilarity(memberId, memberValues, wordsAndScoresForMemberEntry)));
 
                 // If the size of the priority queue exceeds k, remove the smallest element
                 if (topKSimilarities.size() > TOP_K_SIMILARITIES) {
@@ -89,27 +90,25 @@ public class Calculator {
         for (int i = 0; i < NUMBER_OF_MEMBER_IDS; i++) {
             Integer originalMemberId = memberIds.get(i);
 
-            println(i);
-
             Map<String, Double> originalMemberWordsAndScores = memberSimilarityRepository.getWordsForId(originalMemberId);
             List<Integer> notCalculatedIds = iterateListAndGetIdsWithNoCalculatedSimilarity(calculatedMemberSimilarities.get(originalMemberId), i);
 
-            Map<Integer, Map<String, Double>> memberWordsAndScore = memberSimilarityRepository.getWordsForIds(notCalculatedIds);
-            while (!(notCalculatedIds.isEmpty() || memberWordsAndScore.isEmpty())) {
+            Map<Integer, Map<String, Double>> wordsAndScoresForMemberBatch = memberSimilarityRepository.getWordsForIds(notCalculatedIds);
+            while (!(notCalculatedIds.isEmpty() || wordsAndScoresForMemberBatch.isEmpty())) {
 
-                compareWithMember(originalMemberId, originalMemberWordsAndScores, memberWordsAndScore);
+                compareMemberWithDataSet(originalMemberId, originalMemberWordsAndScores, wordsAndScoresForMemberBatch);
 
-                Set<Integer> fetchedMemberIds = new HashSet<>(memberWordsAndScore.keySet());
+                Set<Integer> batchMemberIds = new HashSet<>(wordsAndScoresForMemberBatch.keySet());
 
-                for (Integer fetchedMemberId : fetchedMemberIds) {
-                    Map<String, Double> values = memberWordsAndScore.remove(fetchedMemberId);
+                for (Integer batchMemberId : batchMemberIds) {
+                    Map<String, Double> batchMemberValues = wordsAndScoresForMemberBatch.remove(batchMemberId);
 
-                    if (values.isEmpty()) {
-                        blackList.add(fetchedMemberId);
+                    if (batchMemberValues.isEmpty()) {
+                        blackList.add(batchMemberId);
                         continue;
                     }
 
-                    compareWithMember(fetchedMemberId, values, memberWordsAndScore);
+                    compareMemberWithDataSet(batchMemberId, batchMemberValues, wordsAndScoresForMemberBatch);
                 }
                 notCalculatedIds = iterateListAndGetIdsWithNoCalculatedSimilarity(calculatedMemberSimilarities.get(originalMemberId), i + SIMILARITY_BATCH);
             }
@@ -118,17 +117,17 @@ public class Calculator {
         getTopSimilarities();
     }
 
-    private void compareWithMember(Integer id, Map<String, Double> originalMemberWordsAndScores, Map<Integer, Map<String, Double>> memberWordsAndScore) {
-        Set<Integer> calculatedSimilarities = calculatedMemberSimilarities.get(id);
+    private void compareMemberWithDataSet(Integer memberId, Map<String, Double> memberValues, Map<Integer, Map<String, Double>> dataSet) {
+        Set<Integer> calculatedSimilarities = calculatedMemberSimilarities.get(memberId);
 
-        for (Map.Entry<Integer, Map<String, Double>> entry : memberWordsAndScore.entrySet()) {
+        for (Map.Entry<Integer, Map<String, Double>> entry : dataSet.entrySet()) {
             Integer otherMemberId = entry.getKey();
 
-            if (shouldSimilarityBeCalculated(id, otherMemberId, calculatedSimilarities)) {
+            if (shouldSimilarityBeCalculated(memberId, otherMemberId, calculatedSimilarities)) {
                 calculatedSimilarities.add(otherMemberId);
-                calculatedMemberSimilarities.get(otherMemberId).add(id);
+                calculatedMemberSimilarities.get(otherMemberId).add(memberId);
 
-                topKSimilarities.offer(new Pair<>(id, otherMemberId, cosineSimilarity(id, originalMemberWordsAndScores, entry)));
+                topKSimilarities.offer(new Pair<>(memberId, otherMemberId, cosineSimilarity(memberId, memberValues, entry)));
 
                 // If the size of the priority queue exceeds k, remove the smallest element
                 if (topKSimilarities.size() > TOP_K_SIMILARITIES) {
@@ -137,7 +136,7 @@ public class Calculator {
             }
         }
 
-        calculatedMemberSimilarities.put(id, calculatedSimilarities);
+        calculatedMemberSimilarities.put(memberId, calculatedSimilarities);
     }
 
     private boolean shouldSimilarityBeCalculated(Integer id, Integer otherMemberId, Set<Integer> calculatedSimilarities) {

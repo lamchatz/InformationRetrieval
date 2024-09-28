@@ -70,7 +70,7 @@ public class InvertedIndex {
     );
     private static final String SPACE = " ";
     private static final String WHITESPACE = "\\s";
-    private static final String REGEX = "[.!«¶»@#$%…^&*()_=+<>/?‘;'\",:\\[\\]\\t\\s-]";
+    public static final String REGEX = "[.!«¶»@#$%…^&*()_=+<>/?‘;'\",:\\[\\]\\t\\s-]";
 
     private final Map<String, Long> index;
     private final Collection<TfOfSpeech> tfOfSpeechScores;

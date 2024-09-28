@@ -48,6 +48,7 @@ public class Extractor {
             println("Searched year " + date);
             Collection<Entry> membersKeyWordsForEachYear = keyWordRepository.getMembersKeyWordsForEachYear(date);
             for (Entry entry : membersKeyWordsForEachYear) {
+                //For each member keep the word with the highest score
                 memberHighestScore.merge(entry.getName(), entry, this::keepEntryWithMaxScore);
 
                 FileManager.writeMemberKeyWords(entry);
@@ -62,6 +63,7 @@ public class Extractor {
         for (String date : DATES) {
             Collection<Entry> keyWordsForPoliticalPartiesForEachYear = keyWordRepository.getKeyWordsForPoliticalPartiesForEachYear(date);
             for (Entry entry : keyWordsForPoliticalPartiesForEachYear) {
+                //For each political party keep the word with the highest score
                 politicalPartyHighestScore.merge(entry.getName(), entry, this::keepEntryWithMaxScore);
 
                 FileManager.writePoliticalPartyKeyWords(entry);

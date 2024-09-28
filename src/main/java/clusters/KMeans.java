@@ -14,8 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import static utility.Functions.println;
-
 public class KMeans {
     private static final int K = Config.K_CLUSTERS;
     private static final int MAX_ITERATIONS = Config.MAX_ITERATIONS;
@@ -32,14 +30,18 @@ public class KMeans {
         final ClustersRepository clustersRepository = new ClustersRepository();
         this.VOCABULARY = clustersRepository.getVocabulary();
         this.idfTfOfWordsOfSpeeches = clustersRepository.getSpeechVectors();
-        this.normOfSpeech = new HashMap<>(idfTfOfWordsOfSpeeches.size());
 
-        idfTfOfWordsOfSpeeches.forEach((memberId, entries) -> {
-            normOfSpeech.put(memberId, CosineSimilarity.norm(entries));
-        });
+        this.normOfSpeech = new HashMap<>(idfTfOfWordsOfSpeeches.size());
+        calculateNormOfSpeeches();
 
         this.centroids = new ArrayList<>(K);
         initializeCentroids(centroids);
+    }
+
+    private void calculateNormOfSpeeches() {
+        idfTfOfWordsOfSpeeches.forEach((memberId, entries) -> {
+            normOfSpeech.put(memberId, CosineSimilarity.norm(entries));
+        });
     }
 
     private double cosineSimilarity(Map.Entry<Integer, Map<String, Double>> entry, int centroidId, Map<String, Double> centroidValues) {
@@ -58,29 +60,29 @@ public class KMeans {
         for (int i = 0; i < K; i++) {
             Map<String, Double> centroid = new HashMap<>(VOCABULARY.size());
 
-            for (Map.Entry<String, MinMax> vocabularyEntry : VOCABULARY.entrySet()) {
-                String word = vocabularyEntry.getKey();
-                MinMax minMax = vocabularyEntry.getValue();
+            for (Map.Entry<String, MinMax> entry : VOCABULARY.entrySet()) {
 
-                // Generate random value between min and max
-                double randomValue = minMax.getMin() + (minMax.getMax() - minMax.getMin()) * random.nextDouble();
-
-                centroid.put(word, randomValue);
+                centroid.put(entry.getKey(), generateCentroidWithRandomValues(entry.getValue(), random));
             }
 
             centroids.add(centroid);
         }
     }
 
+    private Double generateCentroidWithRandomValues(MinMax minMax, Random random) {
+        // Generate random value between min and max
+        return minMax.getMin() + (minMax.getMax() - minMax.getMin()) * random.nextDouble();
+    }
+
     private int findNearestCentroid(Map.Entry<Integer, Map<String, Double>> entry) {
         double minDistance = Double.MAX_VALUE;
         int nearestCentroid = -1;
 
-        for (int i = 0; i < centroids.size(); i++) {
-            double distance = cosineSimilarity(entry, i, centroids.get(i));
+        for (int id = 0; id < centroids.size(); id++) {
+            double distance = cosineSimilarity(entry, id, centroids.get(id));
 
             if (distance < minDistance) {
-                nearestCentroid = i;
+                nearestCentroid = id;
                 minDistance = distance;
             }
         }
@@ -92,7 +94,8 @@ public class KMeans {
         Map<Integer, List<Integer>> clusters = new HashMap<>(K);
 
         for (int i = 0; i < K; i++) {
-            clusters.put(i, new ArrayList<>());  // Add an empty ArrayList for each cluster
+            clusters.put(i, new ArrayList<>(VOCABULARY.size()));  // Add an empty ArrayList for each cluster and set
+            // initial capacity to avoid resizing
         }
         return clusters;
     }
@@ -101,13 +104,15 @@ public class KMeans {
         List<Map<String, Double>> newCentroids = new ArrayList<>(K); //initial capacity to avoid possible resizing
         for (Map.Entry<Integer, List<Integer>> cluster : clusters.entrySet()) {
             List<Integer> speechIds = cluster.getValue();
-            Map<String, Double> centroid = new HashMap<>();
+            int speechIdsSize = speechIds.size();
+
+            Map<String, Double> centroid = new HashMap<>(VOCABULARY.size());
             for (String word : VOCABULARY.keySet()) {
                 double sum = 0.0;
                 for (int speechId : speechIds) {
                     sum += idfTfOfWordsOfSpeeches.get(speechId).getOrDefault(word, 0.0);
                 }
-                centroid.put(word, sum / speechIds.size());
+                centroid.put(word, sum / speechIdsSize);
             }
             newCentroids.add(centroid);
         }
@@ -121,47 +126,54 @@ public class KMeans {
         int i = 0;
         boolean centroidsChanged = true;
         while (i < MAX_ITERATIONS && centroidsChanged) {
-            println(i);
             clusters = createClusters();
 
             for (Map.Entry<Integer, Map<String, Double>> speechEntry : idfTfOfWordsOfSpeeches.entrySet()) {
-                int nearestCentroid = findNearestCentroid(speechEntry);
-                clusters.get(nearestCentroid).add(speechEntry.getKey());
+                int nearestCentroidId = findNearestCentroid(speechEntry);
+                clusters.get(nearestCentroidId).add(speechEntry.getKey());
             }
 
             List<Map<String, Double>> newCentroids = reComputeCentroids(clusters);
 
             if (newCentroids.equals(centroids)) {
                 centroidsChanged = false;
+            } else {
+                centroids.clear();
+                centroids = newCentroids;
+                i++;
             }
-            centroids.clear();
-            centroids = newCentroids;
-            i++;
         }
 
+        writeClusters(clusters);
+    }
+
+    private void writeClusters(Map<Integer, List<Integer>> clusters) {
         if (Config.SHOW_ONLY_SPEECH_IDS) {
             FileManager.writeClusters(clusters);
         } else {
-            Map<Integer, List<Speech>> clusterWithSpeeches = new HashMap<>(K);
-
-            SpeechRepository speechRepository = new SpeechRepository();
-            Map<Integer, String> speechOfId = speechRepository.findByIds(idfTfOfWordsOfSpeeches.keySet());
-
-
-            for (int ii = 0; ii < K; ii++) {
-                List<Integer> clusterSpeechIds = clusters.get(ii);
-
-                List<Speech> speeches = new ArrayList<>(clusterSpeechIds.size());
-
-                clusterSpeechIds.forEach(speechId -> {
-                    speeches.add(new Speech(speechId, speechOfId.remove(speechId)));
-                    //remove this id as it will no longer be needed
-                });
-
-                clusterWithSpeeches.put(ii, speeches);
-            }
-
-            FileManager.writeClusters(clusterWithSpeeches);
+            FileManager.writeClusters(mapSpeechIdsToSpeeches(clusters));
         }
+    }
+
+    private Map<Integer, List<Speech>> mapSpeechIdsToSpeeches(Map<Integer, List<Integer>> clusters) {
+        Map<Integer, List<Speech>> clusterWithSpeeches = new HashMap<>(K);
+
+        SpeechRepository speechRepository = new SpeechRepository();
+        Map<Integer, String> speechOfId = speechRepository.findByIds(idfTfOfWordsOfSpeeches.keySet());
+
+        for (int i = 0; i < K; i++) {
+            List<Integer> clusterSpeechIds = clusters.get(i);
+
+            List<Speech> speeches = new ArrayList<>(clusterSpeechIds.size());
+
+            clusterSpeechIds.forEach(speechId -> {
+                speeches.add(new Speech(speechId, speechOfId.remove(speechId)));
+                //remove this id as it will no longer be needed
+            });
+
+            clusterWithSpeeches.put(i, speeches);
+        }
+
+        return clusterWithSpeeches;
     }
 }
