@@ -13,22 +13,6 @@ public class Period {
         this.date = date;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public String getSession() {
-        return session;
-    }
-
-    public String getSitting() {
-        return sitting;
-    }
-
-    public String getDate() {
-        return date;
-    }
-
     @Override
     public String toString() {
         return "{\n\t\tName: " + name +

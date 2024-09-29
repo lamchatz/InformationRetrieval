@@ -13,23 +13,6 @@ public class Member {
         this.role = role;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public String getPoliticalParty() {
-        return politicalParty;
-    }
-
-    public String getRegion() {
-        return region;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    @Override
     public String toString() {
         return "{\n\t\tName: " + name +
                 "\n\t\tPolitical Party: " + politicalParty +
