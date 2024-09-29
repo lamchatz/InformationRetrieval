@@ -31,12 +31,10 @@ public class Member {
 
     @Override
     public String toString() {
-        final StringBuffer sb = new StringBuffer("Member{");
-        sb.append("name='").append(name).append('\'').append("\n");
-        sb.append("politicalParty='").append(politicalParty).append('\'').append("\n");
-        sb.append("region='").append(region).append('\'').append("\n");
-        sb.append("role='").append(role).append('\'').append("\n");
-        sb.append('}');
-        return sb.toString();
+        return "{\n\t\tName: " + name +
+                "\n\t\tPolitical Party: " + politicalParty +
+                "\n\t\tRegion: " +  region +
+                "\n\t\tRole: " + role +
+                "\n\t}";
     }
 }

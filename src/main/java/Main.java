@@ -3,9 +3,8 @@ import config.Config;
 import csv.Reader;
 import database.DatabaseManager;
 import keyword.Extractor;
+import search.Engine;
 import similarity.Calculator;
-
-import static utility.Functions.println;
 
 public class Main {
 
@@ -18,10 +17,8 @@ public class Main {
         }
 
         if (Config.SEARCH) {
-            println("Searching... ");
-            SearchEngine searchEngine = new SearchEngine();
-            //searchEngine.search("αποκατάσταση τραγωδία σημαντικό", "", "2000-11-01");
-            //searchEngine.search("αποκατάσταση κανεις τραγωδία ΣΗΜΑΝΤΙΚΌ");
+            Engine searchEngine = new Engine();
+            searchEngine.readQuestions();
         }
 
         if (Config.EXTRACT_KEY_WORDS) {

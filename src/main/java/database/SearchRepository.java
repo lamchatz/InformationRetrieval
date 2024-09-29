@@ -3,6 +3,7 @@ package database;
 import dto.InfoToShow;
 import dto.Member;
 import dto.Period;
+import search.Entry;
 import utility.Functions;
 
 import java.sql.Connection;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static utility.Functions.println;
+import static utility.Functions.isNotEmpty;
 
 public class SearchRepository {
 
@@ -87,23 +88,22 @@ public class SearchRepository {
         return speechTotalWords;
     }
 
-    public Map<String, Map<Integer, Double>> selectIdfTFValues(List<String> searchWords, String... args) {
+    public Map<String, Map<Integer, Double>> selectIdfTFValues(Collection<String> searchWords, Entry searchEntry) {
         Map<String, Map<Integer, Double>> idfTfOfSpeechesForWord = new HashMap<>(30000);
 
         StringBuilder whereClause = new StringBuilder(WHERE_WORD_IN).append(Functions.generateInClauseFor(searchWords)).append(SPACE);
 
-        String s = BASE_SELECT_IDF_TF_VALUES + createIdfTfValueOfWordQueryFor(whereClause, args);
+        String query = BASE_SELECT_IDF_TF_VALUES + createIdfTfValueOfWordQueryFor(whereClause, searchEntry);
 
-        println(s);
         try (Connection connection = DatabaseManager.connect();
-             ResultSet resultSet = connection.prepareStatement(s).executeQuery()) {
+             ResultSet resultSet = connection.prepareStatement(query).executeQuery()) {
             while (resultSet.next()) {
                 double idfTf = resultSet.getDouble(SCORE);
                 int speechId = resultSet.getInt(SPEECH_ID);
                 String word = resultSet.getString(WORD);
 
                 if (!idfTfOfSpeechesForWord.containsKey(word)) {
-                    idfTfOfSpeechesForWord.put(word, new HashMap<>());
+                    idfTfOfSpeechesForWord.put(word, new HashMap<>(250)); //arbitrary size to avoid possible resizings, as initial capacity is 16
                 }
 
                 Map<Integer, Double> idfTfOfSpeech = idfTfOfSpeechesForWord.get(word);
@@ -118,55 +118,30 @@ public class SearchRepository {
         return idfTfOfSpeechesForWord;
     }
 
-
-    public Map<String, Map<Integer, Double>> selectIdfTfValuesForWordWithoutAccent(String searchWord, String... args) {
-        Map<String, Map<Integer, Double>> idfTfOfSpeechesForWord = new HashMap<>();
-
-        StringBuilder whereClause = new StringBuilder(WHERE_WORD_IN).append(Functions.generateInClauseFor(Functions.generateAccentVariants(searchWord))).append(SPACE);
-        String s = BASE_SELECT_IDF_TF_VALUES + createIdfTfValueOfWordQueryFor(whereClause, args);
-
-        println(s);
-
-        try (Connection connection = DatabaseManager.connect();
-             ResultSet resultSet = connection.prepareStatement(s).executeQuery()) {
-            while (resultSet.next()) {
-                double idfTf = resultSet.getDouble(SCORE);
-                int speechId = resultSet.getInt(SPEECH_ID);
-                String word = resultSet.getString(WORD);
-
-                if (!idfTfOfSpeechesForWord.containsKey(word)) {
-                    idfTfOfSpeechesForWord.put(word, new HashMap<>());
-                }
-
-                Map<Integer, Double> idfTfOfSpeech = idfTfOfSpeechesForWord.get(word);
-                idfTfOfSpeech.put(speechId, idfTf);
-
-                idfTfOfSpeechesForWord.put(word, idfTfOfSpeech);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return idfTfOfSpeechesForWord;
-    }
-    public String createIdfTfValueOfWordQueryFor(StringBuilder whereClause, String... args) {
+    public String createIdfTfValueOfWordQueryFor(StringBuilder whereClause, Entry searchEntry) {
         StringBuilder joins = new StringBuilder();
+        boolean joinedSpeech = false;
         boolean joinedSitting = false;
 
-        if (args.length > 1) {
+        if (isNotEmpty(searchEntry.getMemberName())) {
             joins.append(JOIN_SPEECH_ON_TF);
+            joinedSpeech = true;
 
-            String memberName = args[1];
-            if (Functions.isNotEmpty(memberName)) {
+            String memberName = searchEntry.getMemberName();
+            if (isNotEmpty(memberName)) {
                 joins.append(JOIN_MEMBER_ON_SPEECH);
 
                 whereClause.append(AND_MEMBER_NAME_LIKE).append(memberName).append(PERCENTAGE_SINGLE_QUOTE_WITH_SPACE);
             }
         }
 
-        if (args.length > 2) {
-            String from = args[2];
-            if (Functions.isNotEmpty(from)) {
+        if (isNotEmpty(searchEntry.getFrom())) {
+            String from = searchEntry.getFrom();
+            if (isNotEmpty(from)) {
+                if (!joinedSpeech) {
+                    joins.append(JOIN_SPEECH_ON_TF);
+                    joinedSpeech = true;
+                }
                 joins.append(JOIN_SITTING_ON_SPEECH);
                 joinedSitting = true;
 
@@ -174,10 +149,14 @@ public class SearchRepository {
             }
         }
 
-        if (args.length > 3) {
-            String to = args[3];
-            if (Functions.isNotEmpty(to)) {
+        if (isNotEmpty(searchEntry.getTo())) {
+            String to = searchEntry.getTo();
+            if (isNotEmpty(to)) {
                 if (!joinedSitting) {
+                    if (!joinedSpeech) {
+                        joins.append(JOIN_SPEECH_ON_TF);
+                        joinedSpeech = true;
+                    }
                     joins.append(JOIN_SITTING_ON_SPEECH);
                     joinedSitting = true;
                 }
@@ -186,9 +165,12 @@ public class SearchRepository {
             }
         }
 
-        if (args.length > 4) {
-            String periodOrSession = args[4];
-            if (Functions.isNotEmpty(periodOrSession)) {
+        if (isNotEmpty(searchEntry.getPeriodOrSession())) {
+            String periodOrSession = searchEntry.getPeriodOrSession();
+            if (isNotEmpty(periodOrSession)) {
+                if (!joinedSpeech) {
+                    joins.append(JOIN_SPEECH_ON_TF);
+                }
                 if (!joinedSitting) {
                     joins.append(JOIN_SITTING_ON_SPEECH);
                 }

@@ -25,11 +25,6 @@ public class InfoToShow {
 
     @Override
     public String toString() {
-        final StringBuffer sb = new StringBuffer("InfoToShow{");
-        sb.append("speech=").append(speech).append("\n");
-        sb.append("period=").append(period).append("\n");
-        sb.append("member=").append(member).append("\n");
-        sb.append('}');
-        return sb.toString();
+        return "{\n\tSpeech: " + speech + "\n\tMember: " + member + "\n\tPeriod: " + period + "\n}";
     }
 }

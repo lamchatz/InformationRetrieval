@@ -31,12 +31,10 @@ public class Period {
 
     @Override
     public String toString() {
-        final StringBuffer sb = new StringBuffer("Period{").append("\n");
-        sb.append("name='").append(name).append('\'').append("\n");
-        sb.append("session='").append(session).append('\'').append("\n");
-        sb.append("sitting='").append(sitting).append('\'').append("\n");
-        sb.append("date='").append(date).append('\'').append("\n");
-        sb.append('}');
-        return sb.toString();
+        return "{\n\t\tName: " + name +
+                "\n\t\tSession: " + session +
+                "\n\t\tSitting: " + sitting +
+                "\n\t\tDate: " + date + "\n\t}";
+
     }
 }

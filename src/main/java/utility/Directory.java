@@ -9,7 +9,9 @@ public enum Directory {
     POLITICAL_PARTIES(KEYWORDS.getPathString() + "/politicalParties"),
     SPEECHES(KEYWORDS.getPathString() + "/speeches"),
     SIMILARITIES(WORKING.getPathString() + "/similarities"),
-    CLUSTERS(WORKING.getPathString() + "/clusters");
+    CLUSTERS(WORKING.getPathString() + "/clusters"),
+    SEARCH("src/main/resources/search"),
+    ANSWERS(SEARCH.getPathString() + "/answers");
 
     private final String path;
 

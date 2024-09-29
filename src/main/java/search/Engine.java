@@ -1,50 +1,65 @@
+package search;
+
 import config.Config;
+import csv.Reader;
 import database.SearchRepository;
 import dto.InfoToShow;
 import entities.InvertedIndex;
+import utility.Directory;
+import utility.FileManager;
 import utility.Functions;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.stream.Collectors;
 
 import static utility.Functions.println;
 
-public class SearchEngine {
+public class Engine {
+    private static final String COMMA = ",";
+    private static final String QUESTION = "Question";
+    private static final String NO_MATCHES_FOUND = "No matches found!";
+    private static int QUESTION_COUNTER = 0;
 
     private static final String SINGLE_QUOTE = "'";
-    private static final String WHITE_SPACE = "\\s";
+    private static final String SPACE = " ";
 
     private final SearchRepository searchRepository;
 
-    public SearchEngine() {
+    public Engine() {
         this.searchRepository = new SearchRepository();
+        FileManager.clearDirectory(Directory.ANSWERS);
+        FileManager.createDirectory(Directory.ANSWERS);
     }
 
-    public void search(String... args) {
-        if (args.length > 5) {
-            throw new IllegalArgumentException("More than 4 arguments given!");
-        }
+    public void readQuestions() {
+        Collection<Entry> questions = Reader.readQuestions();
 
-        if (args.length > 0) {
-            String question = args[0];
+        println("Searching... ");
+        for (Entry questionEntry : questions) {
+            QUESTION_COUNTER++;
+            search(questionEntry);
+        }
+    }
+
+    private void search(Entry searchEntry) {
+        String question = searchEntry.getQuestion();
+        if (Functions.isNotEmpty(question)) {
             Map<Integer, Double> accumulators = new HashMap<>(100_000);//arbitrary big number to avoid constant resizing
 
-            String[] words = question.toLowerCase().replace(InvertedIndex.REGEX, " ").split(WHITE_SPACE);
+            String[] words = question.toLowerCase().replaceAll(InvertedIndex.REGEX, SPACE).split(SPACE);
             List<String> accentWords = new ArrayList<>(words.length);
             for (String searchWord : words) {
                 if (Functions.hasAccent(searchWord)) {
                     accentWords.add(SINGLE_QUOTE + searchWord + SINGLE_QUOTE);
                 } else {
-                    searchForWordWithoutAccent(accumulators, searchWord, args);
+                    searchForWordWithoutAccent(accumulators, searchWord, searchEntry);
                 }
             }
-            searchForAccentWords(accumulators, accentWords, args);
+            searchForAccentWords(accumulators, accentWords, searchEntry);
 
             normalizeValues(accumulators);
 
@@ -52,29 +67,8 @@ public class SearchEngine {
         }
     }
 
-    private void printAccordingToUserInput(Collection<InfoToShow> infos) {
-        if (!infos.isEmpty()) {
-            println("Do you want to view the results?");
-            Scanner scanner = new Scanner(System.in);
-            String input = scanner.nextLine();
-            Iterator<InfoToShow> iterator = infos.iterator();
-
-            while ("y".equalsIgnoreCase(input) && iterator.hasNext()) {
-                println(iterator.next());
-
-                println("Continue? ");
-                input = scanner.nextLine();
-                println("");
-            }
-
-            scanner.close();
-        } else {
-            println("No matches found...");
-        }
-    }
-
-    private void searchForAccentWords(Map<Integer, Double> accumulators, List<String> searchWords, String... args) {
-        Map<String, Map<Integer, Double>> idfTfOfSpeechesForWords = searchRepository.selectIdfTFValues(searchWords, args);
+    private void searchForAccentWords(Map<Integer, Double> accumulators, List<String> searchWords, Entry searchEntry) {
+        Map<String, Map<Integer, Double>> idfTfOfSpeechesForWords = searchRepository.selectIdfTFValues(searchWords, searchEntry);
 
         if (!idfTfOfSpeechesForWords.isEmpty()) {
             idfTfOfSpeechesForWords.forEach( (word, idfTFValuesOfWord) -> idfTFValuesOfWord.forEach((speechId, idfTf) ->
@@ -82,8 +76,8 @@ public class SearchEngine {
         }
     }
 
-    private void searchForWordWithoutAccent(Map<Integer, Double> searchAccumulators, String searchWord, String... args) {
-        Map<String, Map<Integer, Double>> idfTfOfSpeechesForWords = searchRepository.selectIdfTfValuesForWordWithoutAccent(searchWord, args);
+    private void searchForWordWithoutAccent(Map<Integer, Double> searchAccumulators, String searchWord, Entry searchEntry) {
+        Map<String, Map<Integer, Double>> idfTfOfSpeechesForWords = searchRepository.selectIdfTFValues(Functions.generateAccentVariants(searchWord), searchEntry);
 
         if (!idfTfOfSpeechesForWords.isEmpty()) {
             //If a speech id is associated with more than one word, keep the highest score
@@ -94,7 +88,7 @@ public class SearchEngine {
                             Map.Entry::getValue,
                             Double::max));
 
-            highestScoreForEachSpeechId.forEach((speechId, sum) -> searchAccumulators.merge(speechId, sum, Double::sum));
+            highestScoreForEachSpeechId.forEach((speechId, highestScore) -> searchAccumulators.merge(speechId, highestScore, Double::sum));
         }
     }
 
@@ -114,15 +108,20 @@ public class SearchEngine {
                 .limit(Config.SEARCH_TOP_K)
                 .collect(Collectors.toList());
 
-        topK.forEach(entry -> {
-            Integer speechId = entry.getKey();
-            Double score = entry.getValue();
-            println("Speech ID: " + speechId + ", Score: " + score);
-        });
-
-        printAccordingToUserInput(searchRepository.getAllInfoFor(topK.stream()
+        writeAnswers(searchRepository.getAllInfoFor(topK.stream()
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList())));
+    }
 
+    private void writeAnswers(Collection<InfoToShow> infos) {
+        String fileName = QUESTION + QUESTION_COUNTER;
+
+        if (infos.isEmpty()) {
+            FileManager.writeSearchAnswers(NO_MATCHES_FOUND, fileName);
+            return;
+        }
+        for (InfoToShow infoToShow : infos) {
+            FileManager.writeSearchAnswers(infoToShow + COMMA, fileName);
+        }
     }
 }

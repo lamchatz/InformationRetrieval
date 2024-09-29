@@ -38,6 +38,12 @@ public class FileManager {
         super();
     }
 
+    //Search
+
+    public static void writeSearchAnswers(String answer, String fileName) {
+        writeValuesToFile(Directory.ANSWERS, fileName, answer);
+    }
+
     //Keywords
     public static void writeMemberKeyWords(Entry entry) {
         writeValuesToFile(Directory.MEMBERS, entry.getName(), format(entry));
